@@ -1,0 +1,423 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Created with Jaspersoft Studio version 6.2.0.final using JasperReports Library version 6.2.0  -->
+<!-- 2016-06-25T14:22:34 -->
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="subreport_conditionrecord" pageWidth="555" pageHeight="585" whenNoDataType="BlankPage" columnWidth="555" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" whenResourceMissingType="Empty" uuid="187a0de0-753f-4914-8f5c-ac61ae00ab29">
+	<property name="com.jaspersoft.studio.data.sql.tables" value=""/>
+	<property name="com.jaspersoft.studio.unit." value="pixel"/>
+	<property name="net.sf.jasperreports.data.adapter" value="omca-digocean.xml"/>
+	<property name="com.jaspersoft.studio.unit.pageHeight" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.pageWidth" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.topMargin" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.bottomMargin" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.leftMargin" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.rightMargin" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.columnWidth" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.columnSpacing" value="pixel"/>
+	<parameter name="tenantid" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["35"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="csid" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["1449fdd4-6d71-4440-9b80"]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[SELECT
+    consvc.id objectid,
+    h1.name conservcsid,
+    
+    consvc.conservationnumber conservationnumber,
+    CASE WHEN (consvc.treatmentpurpose IS NOT NULL AND consvc.treatmentpurpose <> '') THEN
+        regexp_replace(consvc.treatmentpurpose, '^.*\)''(.*)''$', '\1')
+        ELSE ''
+    END AS treatmentpurpose,
+    consvc.fabricationnote fabricationnote,
+    consvc.proposedtreatment proposedtreatment,
+    consvc.treatmentstartdate + interval '4 hour' treatmentstartdate,
+    consvc.treatmentenddate + interval '4 hour' treatmentenddate,
+    consvc.treatmentsummary treatmentsummary,
+    CASE WHEN (consvc.researcher IS NOT NULL AND consvc.researcher <> '') THEN
+        regexp_replace(consvc.researcher, '^.*\)''(.*)''$', '\1')
+        ELSE ''
+    END AS researcher,
+    consvc.proposedanalysis proposedanalysis,
+    consvc.proposedanalysisdate + interval '4 hour' proposedanalysisdate,
+    consvc.analysismethod analysismethod,
+    consvc.analysisresults analysisresults,
+
+    --consvccons.item conservator,
+    array_to_string(array_agg(DISTINCT (consvccons.pos, substring(consvccons.item, position(')''' IN consvccons.item)+2, length(consvccons.item)-position(')''' IN consvccons.item)-2))),';;') AS conservator
+
+    -- converting examination group into subreport
+    --exg.examinationstaff examinationstaff,
+    --substring(exg.examinationstaff, position(')''' IN exg.examinationstaff)+2, length(exg.examinationstaff)-position(')''' IN exg.examinationstaff)-2) AS examinationstaff,
+    --exg.examinationphase examinationphase,
+    --substring(exg.examinationphase, position(')''' IN exg.examinationphase)+2, length(exg.examinationphase)-position(')''' IN exg.examinationphase)-2) AS examinationphase,
+    --exg.examinationdate examinationdate,
+    --exg.examinationdate + interval '4 hour' examinationdate,
+    --exg.examinationnote examinationnote
+    --exg.examinationnote examinationnote
+    
+    -- converting destanalysis group into subreport
+    --dag.destanalysisapproveddate + interval '4 hour' destanalysisapproveddate,
+    --dag.destanalysisapprovalnote destanalysisapprovalnote,
+    --substring(dag.sampleby, position(')''' IN dag.sampleby)+2, length(dag.sampleby)-position(')''' IN dag.sampleby)-2) AS sampleby,
+    --dag.sampledate + interval '4 hour' sampledate,
+    --dag.sampledescription sampledescription,
+    --dag.samplereturned samplereturned,
+    --dag.samplereturnedlocation samplereturnedlocation
+
+FROM conservation_common consvc
+
+    JOIN hierarchy h1 ON (consvc.id=h1.id)
+    JOIN relations_common rc1 ON (h1.name=rc1.subjectcsid)
+
+    JOIN hierarchy h2 ON (rc1.objectcsid=h2.name)
+    JOIN collectionobjects_common co ON (h2.id=co.id)
+
+    -- examinationgroup
+    -- converting examination group into subreport
+    --LEFT OUTER JOIN hierarchy h8 ON (cc.id = h8.parentid AND h8.primarytype = 'examinationGroup' AND h8.pos = 0)
+    --LEFT OUTER JOIN examinationgroup exg ON (exg.id = h8.id)
+    
+    -- destanalysisgroup
+    -- converting destanalysis group into subreport
+    --LEFT OUTER JOIN hierarchy h9 ON (consvc.id = h9.parentid AND h9.primarytype = 'destAnalysisGroup' AND h9.pos = 0)
+    --LEFT OUTER JOIN destanalysisgroup dag ON (dag.id = h9.id))
+
+    -- conservators
+    LEFT OUTER JOIN conservation_common_conservators consvccons ON (consvc.id = consvccons.id)
+
+    INNER JOIN misc ON (misc.id = consvc.id AND misc.lifecyclestate <> 'deleted')
+    INNER JOIN collectionspace_core core ON (core.id = consvc.id)
+
+WHERE core.tenantid=$P{tenantid} AND h2.name=$P{csid}
+
+GROUP BY researcher, proposedanalysis, proposedanalysisdate, analysismethod, analysisresults,
+         --examinationstaff, examinationphase, examinationdate, examinationnote,
+         conservationnumber, treatmentpurpose, fabricationnote, proposedtreatment, treatmentstartdate, treatmentenddate, treatmentsummary,
+         objectid, conservcsid
+
+ORDER BY treatmentenddate ASC]]>
+	</queryString>
+	<field name="objectid" class="java.lang.String"/>
+	<field name="conservcsid" class="java.lang.String"/>
+	<field name="conservationnumber" class="java.lang.String"/>
+	<field name="treatmentpurpose" class="java.lang.String"/>
+	<field name="fabricationnote" class="java.lang.String"/>
+	<field name="proposedtreatment" class="java.lang.String"/>
+	<field name="treatmentstartdate" class="java.sql.Timestamp"/>
+	<field name="treatmentenddate" class="java.sql.Timestamp"/>
+	<field name="treatmentsummary" class="java.lang.String"/>
+	<field name="researcher" class="java.lang.String"/>
+	<field name="proposedanalysis" class="java.lang.String"/>
+	<field name="proposedanalysisdate" class="java.sql.Timestamp"/>
+	<field name="analysismethod" class="java.lang.String"/>
+	<field name="analysisresults" class="java.lang.String"/>
+	<field name="conservator" class="java.lang.String"/>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band height="25" splitType="Stretch">
+			<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="10" width="200" height="15" uuid="af56f264-77e3-468e-ae16-6b782f1976e5">
+					<property name="com.jaspersoft.studio.unit.width" value="pixel"/>
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement verticalAlignment="Bottom">
+					<font size="12" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Conservation]]></text>
+			</staticText>
+		</band>
+	</title>
+	<detail>
+		<band height="165" splitType="Immediate">
+			<line>
+				<reportElement x="0" y="12" width="555" height="1" uuid="47bb10e3-907b-49e3-8ab3-4edbe093c6dd"/>
+			</line>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="25" width="180" height="15" uuid="dfad9d61-5614-48f2-9e10-b4a7a7b4db8e">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="0" leftPadding="0" rightPadding="0"/>
+				<textElement textAlignment="Left" verticalAlignment="Bottom">
+					<font size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Conservation Reference Number]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="40" width="555" height="20" uuid="2ed6d295-d779-4883-afcd-aed99dcde7e6">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0"/>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[$F{conservationnumber}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="60" width="180" height="15" uuid="2699dedb-0cd8-4868-be9f-219d3cf9b89b">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="0" leftPadding="0" rightPadding="0"/>
+				<textElement textAlignment="Left" verticalAlignment="Bottom">
+					<font size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Conservator]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="75" width="555" height="20" uuid="b7cfecc7-3f3d-492c-94fe-9d839a550791">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0"/>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[$F{conservator}.replaceAll("\\([0-9]*,\"?|\"?\\)","").replaceAll(";;", "\n")]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="95" width="180" height="15" uuid="9b1db281-556b-4f76-adbf-86faeb9c3465">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="0" leftPadding="0" rightPadding="0"/>
+				<textElement textAlignment="Left" verticalAlignment="Bottom">
+					<font size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Treatment Purpose]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="110" width="555" height="20" uuid="12569461-c07d-465d-ba7f-969fcaad521a">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0"/>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[$F{treatmentpurpose}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="130" width="180" height="15" uuid="5c8fa21b-4edc-4fc9-b683-4e123889fe72">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="0" leftPadding="0" rightPadding="0"/>
+				<textElement textAlignment="Left" verticalAlignment="Bottom">
+					<font size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Fabrication Notes]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="145" width="555" height="20" uuid="6356fad7-322d-4533-9f59-5904c1aca619">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0"/>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[$F{fabricationnote}]]></textFieldExpression>
+			</textField>
+		</band>
+		<band height="40" splitType="Immediate">
+			<subreport>
+				<reportElement x="0" y="0" width="555" height="40" uuid="8bc93a56-a96e-4cb5-8a33-7687b6eaa09b"/>
+				<subreportParameter name="tenantid">
+					<subreportParameterExpression><![CDATA[$P{tenantid}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="csid">
+					<subreportParameterExpression><![CDATA[$F{conservcsid}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA["subreport_examinationgroup.jasper"]]></subreportExpression>
+			</subreport>
+		</band>
+		<band height="140" splitType="Immediate">
+			<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="0" width="180" height="15" uuid="0509cee1-9abd-4bcf-a768-cf3ea07d7710">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="0" leftPadding="0" rightPadding="0"/>
+				<textElement textAlignment="Left" verticalAlignment="Bottom">
+					<font size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Proposed Treatment]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="15" width="555" height="20" uuid="8758efdc-22be-4a9d-82e3-f20096e0e6fb">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0"/>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[$F{proposedtreatment}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="35" width="180" height="15" uuid="d223a48f-1bb6-407d-b753-c201c0ac6e1b">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="0" leftPadding="0" rightPadding="0"/>
+				<textElement textAlignment="Left" verticalAlignment="Bottom">
+					<font size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Treatment Start Date]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="50" width="555" height="20" uuid="4ee5984c-9c58-44c9-9fdd-264c20d0c50e">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0"/>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[($F{treatmentstartdate}==null) ? "" : new java.text.SimpleDateFormat("MM/dd/yyyy").format($F{treatmentstartdate})]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="70" width="180" height="15" uuid="296b1daf-954b-4f70-a092-0a45a31bfd49">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="0" leftPadding="0" rightPadding="0"/>
+				<textElement textAlignment="Left" verticalAlignment="Bottom">
+					<font size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Treatment End Date]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="85" width="555" height="20" uuid="6a0f8ff1-cc6c-450a-977e-6000b24c733e">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0"/>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[($F{treatmentenddate}==null) ? "" : new java.text.SimpleDateFormat("MM/dd/yyyy").format($F{treatmentenddate})]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="105" width="180" height="15" uuid="29bece0c-2027-40fa-80db-3a3e44db82bc">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="0" leftPadding="0" rightPadding="0"/>
+				<textElement textAlignment="Left" verticalAlignment="Bottom">
+					<font size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Treatment Summary]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="120" width="555" height="20" uuid="5acfcdac-4091-422d-af68-702e48f1a6fb">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0"/>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[$F{treatmentsummary}]]></textFieldExpression>
+			</textField>
+		</band>
+		<band height="125" splitType="Immediate">
+			<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="20" width="180" height="15" uuid="a6243deb-ded7-4c5e-8316-e1bed190b190">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+					<property name="com.jaspersoft.studio.unit.y" value="pixel"/>
+				</reportElement>
+				<box topPadding="0" leftPadding="0" rightPadding="0"/>
+				<textElement textAlignment="Left" verticalAlignment="Bottom">
+					<font size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Researcher]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="35" width="555" height="20" uuid="e0a430cc-b3e7-4a19-a0bd-10a437144e28">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0"/>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[$F{researcher}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="55" width="180" height="15" uuid="8c406a95-8c2f-4c1d-8129-9e25a9d20d39">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+					<property name="com.jaspersoft.studio.unit.y" value="pixel"/>
+				</reportElement>
+				<box topPadding="0" leftPadding="0" rightPadding="0"/>
+				<textElement textAlignment="Left" verticalAlignment="Bottom">
+					<font size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Proposed Analysis]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="70" width="555" height="20" uuid="f671a2a1-8913-4918-8bd1-1b0ac89be538">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0"/>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[$F{proposedanalysis}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="90" width="180" height="15" uuid="c0a66ee0-9a66-4a55-82b6-0cc34599e3b4">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+					<property name="com.jaspersoft.studio.unit.y" value="pixel"/>
+				</reportElement>
+				<box topPadding="0" leftPadding="0" rightPadding="0"/>
+				<textElement textAlignment="Left" verticalAlignment="Bottom">
+					<font size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Proposed Analysis Date]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="105" width="555" height="20" uuid="465411e8-70f6-4383-9485-2bb08ba79dbf">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0"/>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[($F{proposedanalysisdate}==null) ? "" : new java.text.SimpleDateFormat("MM/dd/yyyy").format($F{proposedanalysisdate})]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement x="24" y="10" width="500" height="1" forecolor="#CCCCCC" uuid="ec334246-d329-47fc-9834-8dbe6d473cc4"/>
+			</line>
+		</band>
+		<band height="40" splitType="Stretch">
+			<subreport>
+				<reportElement x="0" y="0" width="555" height="40" uuid="04d2485f-2171-4bfd-9c31-9a8e52a5d1d1"/>
+				<subreportParameter name="tenantid">
+					<subreportParameterExpression><![CDATA[$P{tenantid}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="csid">
+					<subreportParameterExpression><![CDATA[$F{conservcsid}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA["subreport_destanalysisgroup.jasper"]]></subreportExpression>
+			</subreport>
+		</band>
+		<band height="75" splitType="Immediate">
+			<staticText>
+				<reportElement positionType="Float" x="0" y="0" width="180" height="15" uuid="a363f513-5d9f-4fbd-aa06-c97121298e25">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+					<property name="com.jaspersoft.studio.unit.y" value="pixel"/>
+				</reportElement>
+				<box topPadding="0" leftPadding="0" rightPadding="0"/>
+				<textElement textAlignment="Left" verticalAlignment="Bottom">
+					<font size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Analytical Methodology]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="15" width="555" height="20" uuid="dc730846-8a35-4bad-a6ed-60bad2506431">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0"/>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[$F{analysismethod}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="35" width="180" height="15" uuid="ad13af02-5383-4be9-b950-957a1b239ab7">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+					<property name="com.jaspersoft.studio.unit.y" value="pixel"/>
+				</reportElement>
+				<box topPadding="0" leftPadding="0" rightPadding="0"/>
+				<textElement textAlignment="Left" verticalAlignment="Bottom">
+					<font size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Analytical Results]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="50" width="555" height="20" uuid="baa6aa86-c6f8-4490-9603-981858e6f576">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0"/>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[$F{analysisresults}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+</jasperReport>

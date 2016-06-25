@@ -1,0 +1,578 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Created with Jaspersoft Studio version 6.2.0.final using JasperReports Library version 6.2.0  -->
+<!-- 2016-06-25T14:22:22 -->
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="subreport_conditionrecord" pageWidth="555" pageHeight="725" whenNoDataType="BlankPage" columnWidth="555" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" whenResourceMissingType="Empty" uuid="187a0de0-753f-4914-8f5c-ac61ae00ab29">
+	<property name="com.jaspersoft.studio.data.sql.tables" value=""/>
+	<property name="com.jaspersoft.studio.unit." value="pixel"/>
+	<property name="net.sf.jasperreports.data.adapter" value="omca-digocean.xml"/>
+	<parameter name="tenantid" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["35"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="csid" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["1449fdd4-6d71-4440-9b80"]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[SELECT
+    condc.id objectid,
+    h1.name condcsid,
+
+    condc.conditioncheckrefnumber conditioncheckrefnumber,
+    CASE WHEN (condc.conditionchecker IS NOT NULL AND condc.conditionchecker <> '') THEN
+        regexp_replace(condc.conditionchecker, '^.*\)''(.*)''$', '\1')
+        ELSE ''
+    END AS conditionchecker,
+    CASE WHEN (condc.conditioncheckreason IS NOT NULL AND condc.conditioncheckreason <> '') THEN
+        regexp_replace(condc.conditioncheckreason, '^.*\)''(.*)''$', '\1')
+        ELSE ''
+    END AS conditioncheckreason,
+    CASE WHEN (condcomca.condition IS NOT NULL AND condcomca.condition <> '') THEN
+        regexp_replace(condcomca.condition, '^.*\)''(.*)''$', '\1')
+        ELSE ''
+    END AS condition,
+    condcomca.conditiondate + interval '4 hour' conditiondate,
+    condcomca.conditionnote conditionnote,
+    condc.conditionchecknote conditionchecknote,
+    condcomca.okforexhibitloanaccession okforexhibitloanaccession,
+    CASE WHEN (condcomca.needstreatment IS NOT NULL AND condcomca.needstreatment <> '') THEN
+        regexp_replace(condcomca.needstreatment, '^.*\)''(.*)''$', '\1')
+        ELSE ''
+    END AS needstreatment,
+    condc.displayrecommendations displayrecommendations,
+    condc.handlingrecommendations handlingrecommendations,
+    condc.packingrecommendations packingrecommendations,
+    CASE WHEN (condcomca.temprequirement IS NOT NULL AND condcomca.temprequirement <> '') THEN
+        regexp_replace(condcomca.temprequirement, '^.*\)''(.*)''$', '\1')
+        ELSE ''
+    END AS temprequirement,
+    CASE WHEN (condcomca.humidityrequirement IS NOT NULL AND condcomca.humidityrequirement <> '') THEN
+        regexp_replace(condcomca.humidityrequirement, '^.*\)''(.*)''$', '\1')
+        ELSE ''
+    END AS humidityrequirement,
+    CASE WHEN (condcomca.lightrequirement IS NOT NULL AND condcomca.lightrequirement <> '') THEN
+        regexp_replace(condcomca.lightrequirement, '^.*\)''(.*)''$', '\1')
+        ELSE ''
+    END AS lightrequirement,
+    condc.storagerequirements storagerequirements,
+
+    --ccmeth.item conditoncheckmethod,
+    array_to_string(array_agg(DISTINCT (ccmeth.pos, substring(ccmeth.item, position(')''' IN ccmeth.item)+2, length(ccmeth.item)-position(')''' IN ccmeth.item)-2))),';;') AS conditoncheckmethod
+
+    -- converting envconditionnote group into subreport
+    --ecng.envconditionnote envconditionnote,
+    --ecng.envconditionnotedate + interval '4 hour' envconditionnotedate,
+
+    -- converting hazard group into subreport
+    --substring(hzg.hazard, position(')''' IN hzg.hazard)+2, length(hzg.hazard)-position(')''' IN hzg.hazard)-2) AS hazard,
+    --hzg.hazarddate + interval '4 hour' hazarddate,
+    --hzg.hazardnote hazardnote,
+
+FROM conditionchecks_common condc
+
+    JOIN hierarchy h1 ON (condc.id=h1.id)
+    JOIN relations_common rc1 ON (h1.name=rc1.subjectcsid)
+
+    JOIN hierarchy h2 ON (rc1.objectcsid=h2.name)
+    JOIN collectionobjects_common co ON (h2.id=co.id)
+
+    -- envconditionnotegroup
+    -- converting envconditionnote group into subreport
+    --LEFT OUTER JOIN hierarchy h8 ON (ccc.id = h8.parentid AND h8.primarytype = 'envConditionNoteGroup' AND h8.pos = 0)
+    --LEFT OUTER JOIN envconditionnotegroup ecng ON (ecng.id = h8.id)
+
+    -- hazardgroup
+    -- converting hazard group into subreport
+    --LEFT OUTER JOIN hierarchy h9 ON (ccc.id = h9.parentid AND h9.primarytype = 'hazardGroup' AND h9.pos = 0)
+    --LEFT OUTER JOIN hazardgroup hzg ON (hzg.id = h9.id)
+
+    -- conditoncheckmethod
+    LEFT OUTER JOIN conditionchecks_omca_omcaconditioncheckmethods ccmeth ON (condc.id = ccmeth.id)
+
+    INNER JOIN misc ON (misc.id = condc.id AND misc.lifecyclestate <> 'deleted')
+    INNER JOIN collectionspace_core core ON (core.id = condc.id)
+    INNER JOIN conditionchecks_omca condcomca ON (condc.id=condcomca.id)
+
+WHERE core.tenantid=$P{tenantid} AND h2.name=$P{csid}
+
+GROUP BY conditioncheckrefnumber, conditionchecker, conditioncheckreason, condition, conditiondate, conditionnote, conditionchecknote, okforexhibitloanaccession,
+         needstreatment, displayrecommendations, handlingrecommendations, packingrecommendations, temprequirement, humidityrequirement, lightrequirement, storagerequirements,
+         --hazard, hazarddate, hazardnote, envconditionnote, envconditionnotedate,
+         objectid, condcsid
+
+ORDER BY conditiondate ASC]]>
+	</queryString>
+	<field name="objectid" class="java.lang.String"/>
+	<field name="condcsid" class="java.lang.String"/>
+	<field name="conditioncheckrefnumber" class="java.lang.String"/>
+	<field name="conditionchecker" class="java.lang.String"/>
+	<field name="conditioncheckreason" class="java.lang.String"/>
+	<field name="condition" class="java.lang.String"/>
+	<field name="conditiondate" class="java.sql.Timestamp"/>
+	<field name="conditionnote" class="java.lang.String"/>
+	<field name="conditionchecknote" class="java.lang.String"/>
+	<field name="okforexhibitloanaccession" class="java.lang.Boolean"/>
+	<field name="needstreatment" class="java.lang.String"/>
+	<field name="displayrecommendations" class="java.lang.String"/>
+	<field name="handlingrecommendations" class="java.lang.String"/>
+	<field name="packingrecommendations" class="java.lang.String"/>
+	<field name="temprequirement" class="java.lang.String"/>
+	<field name="humidityrequirement" class="java.lang.String"/>
+	<field name="lightrequirement" class="java.lang.String"/>
+	<field name="storagerequirements" class="java.lang.String"/>
+	<field name="conditoncheckmethod" class="java.lang.String"/>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band height="25" splitType="Stretch">
+			<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="10" width="200" height="15" uuid="af56f264-77e3-468e-ae16-6b782f1976e5">
+					<property name="com.jaspersoft.studio.unit.width" value="pixel"/>
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box>
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement verticalAlignment="Bottom">
+					<font size="12" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Condition]]></text>
+			</staticText>
+		</band>
+	</title>
+	<detail>
+		<band height="305" splitType="Immediate">
+			<staticText>
+				<reportElement positionType="Float" x="0" y="130" width="260" height="15" uuid="18ea6dd6-8905-4961-93e9-ce0ec1571ebf">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="0" leftPadding="0" rightPadding="0">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Left" verticalAlignment="Bottom">
+					<font size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Condition Check/Assessment Method]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="75" width="555" height="20" uuid="f149da6d-88b1-48f7-9a6b-34a9975c1a49">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[$F{conditionchecker}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="95" width="260" height="15" uuid="f420a55f-54c6-4c9a-9de9-ddae4378abbe">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="0" leftPadding="0" rightPadding="0">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Left" verticalAlignment="Bottom">
+					<font size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Condition Check/Assessment Reason]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="110" width="555" height="20" uuid="1681fd1c-96f4-47da-a5a0-3d999029c7f8">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[$F{conditioncheckreason}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="60" width="180" height="15" uuid="8afb1d5c-be35-4d6f-b1fe-403960fe8c03">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="0" leftPadding="0" rightPadding="0">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Left" verticalAlignment="Bottom">
+					<font size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Condition Checker/Assessor]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="145" width="555" height="20" uuid="485e6a2d-feb4-4bf4-a04d-307b0a37b363">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement verticalAlignment="Top">
+					<paragraph lineSpacing="1_1_2"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{conditoncheckmethod}.replaceAll("\\([0-9]*,\"?|\"?\\)","").replaceAll(";;", "\n")]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="200" width="180" height="15" uuid="70d502c6-ac95-4a15-acf6-ccdee550203a">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="0" leftPadding="0" rightPadding="0">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Left" verticalAlignment="Bottom">
+					<font size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Condition Date]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="215" width="555" height="20" uuid="67ee6164-2c0c-4f81-9154-8cc3d1f9d589">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[($F{conditiondate}==null) ? "" : new java.text.SimpleDateFormat("MM/dd/yyyy").format($F{conditiondate})]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="235" width="180" height="15" uuid="7abbf91b-7c29-4ab7-8c19-5c2c8d5e927f">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="0" leftPadding="0" rightPadding="0">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Left" verticalAlignment="Bottom">
+					<font size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Condition Note]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="250" width="555" height="20" uuid="c5cb2e2b-46a7-44cc-9c3a-e5cc3ca623fb">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[$F{conditionnote}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="270" width="260" height="15" uuid="6c110ef7-d860-4dca-be78-0f9694967907">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="0" leftPadding="0" rightPadding="0">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Left" verticalAlignment="Bottom">
+					<font size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Condition Check/Assessment Note]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="285" width="555" height="20" uuid="f66ebcd9-a9ba-4ee6-a156-bd35430c6913">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[$F{conditionchecknote}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="25" width="260" height="15" uuid="200b64cc-353e-4271-9ef6-0d6ce3af9871">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="0" leftPadding="0" rightPadding="0">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Left" verticalAlignment="Bottom">
+					<font size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Condition Check/Assessment Reference Number]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="40" width="555" height="20" uuid="9778cfe2-14ba-42ae-8aa7-a1d282bd9a8b">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[$F{conditioncheckrefnumber}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="165" width="180" height="15" uuid="e5dd215a-0809-49f8-91bb-3e067e940bf6">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="0" leftPadding="0" rightPadding="0">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Left" verticalAlignment="Bottom">
+					<font size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Condition]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="180" width="555" height="20" uuid="34741749-0a1d-4889-866b-d3496c6d002a">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement verticalAlignment="Top">
+					<paragraph lineSpacing="1_1_2"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{condition}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement positionType="Float" x="0" y="12" width="555" height="1" uuid="90d37e89-5d17-400f-9d54-a06d5cb21cca"/>
+			</line>
+		</band>
+		<band height="40" splitType="Immediate">
+			<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+			<subreport>
+				<reportElement positionType="Float" x="0" y="0" width="555" height="40" uuid="015186d5-8a35-46a0-b9be-c004e0ec11f4">
+					<property name="com.jaspersoft.studio.unit.x" value="pixel"/>
+				</reportElement>
+				<subreportParameter name="csid">
+					<subreportParameterExpression><![CDATA[$F{condcsid}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="tenantid">
+					<subreportParameterExpression><![CDATA[$P{tenantid}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA["subreport_envconditionnotegroup.jasper"]]></subreportExpression>
+			</subreport>
+		</band>
+		<band height="335" splitType="Immediate">
+			<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="20" width="180" height="15" uuid="01eeacc4-eeca-4f4c-a159-65e29f6645e2">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="0" leftPadding="0" rightPadding="0"/>
+				<textElement textAlignment="Left" verticalAlignment="Bottom">
+					<font size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Ok For Exhibit/Loan/Accession]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="35" width="555" height="20" uuid="50521651-9f27-4ab8-9baa-e49cbf7f3e8f">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0"/>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[$F{okforexhibitloanaccession}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="55" width="180" height="15" uuid="783ca770-bc78-461e-a61c-b9e44bef0b07">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="0" leftPadding="0" rightPadding="0"/>
+				<textElement textAlignment="Left" verticalAlignment="Bottom">
+					<font size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Needs Treatment]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="70" width="555" height="20" uuid="a07bb53e-6a90-46c3-91da-a0fbbbdae8f1">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0"/>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[$F{needstreatment}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="90" width="180" height="15" uuid="37fd0728-2af7-4e34-bc06-515bcce12334">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="0" leftPadding="0" rightPadding="0"/>
+				<textElement textAlignment="Left" verticalAlignment="Bottom">
+					<font size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Display Recommendations]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="140" width="555" height="20" uuid="002002fd-922d-424e-8e2a-ef68d53618e1">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0"/>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[$F{handlingrecommendations}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="125" width="180" height="15" uuid="410f119a-20fe-494a-afb6-58b59dbee4f7">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="0" leftPadding="0" rightPadding="0"/>
+				<textElement textAlignment="Left" verticalAlignment="Bottom">
+					<font size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Handling Recommendations]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="105" width="555" height="20" uuid="4f9f4cdc-7845-4a3f-b40a-f8071620af60">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0"/>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[$F{displayrecommendations}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="160" width="260" height="15" uuid="076fd6a6-2533-405b-a8d9-9a01b9f51977">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="0" leftPadding="0" rightPadding="0"/>
+				<textElement textAlignment="Left" verticalAlignment="Bottom">
+					<font size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Packing/Transportation Recommendations]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="175" width="555" height="20" uuid="e89be4dd-e3ef-4cb9-9a83-261af4e8c95d">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0"/>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[$F{packingrecommendations}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="230" width="180" height="15" uuid="13cae773-2d0a-41d7-85e1-93829f5dd064">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="0" leftPadding="0" rightPadding="0"/>
+				<textElement textAlignment="Left" verticalAlignment="Bottom">
+					<font size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Humidity]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="210" width="555" height="20" uuid="3a06f857-f14c-4eed-996a-4df4870b7602">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0"/>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[$F{temprequirement}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="195" width="180" height="15" uuid="f87c0232-48f7-4604-b4ee-0bb3726ae8ed">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="0" leftPadding="0" rightPadding="0"/>
+				<textElement textAlignment="Left" verticalAlignment="Bottom">
+					<font size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Temperature]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="245" width="555" height="20" uuid="2ee7eaed-6377-458a-918a-988015daee00">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0"/>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[$F{humidityrequirement}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="265" width="180" height="15" uuid="28195d03-215f-4b63-932f-9c7c23327874">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="0" leftPadding="0" rightPadding="0"/>
+				<textElement textAlignment="Left" verticalAlignment="Bottom">
+					<font size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Light]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="280" width="555" height="20" uuid="8e2a1b9f-3973-4ac3-8923-43c048c7a76a">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0"/>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[$F{lightrequirement}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="300" width="180" height="15" uuid="7ced22e3-74f6-41e6-8405-46a4fa58ee89">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="0" leftPadding="0" rightPadding="0"/>
+				<textElement textAlignment="Left" verticalAlignment="Bottom">
+					<font size="10" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Storage Requirements]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="315" width="555" height="20" uuid="06e2da92-2a02-4b08-b260-5c9d7f9bfbd7">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0"/>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[$F{storagerequirements}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement positionType="Float" x="24" y="10" width="500" height="1" forecolor="#CCCCCC" uuid="7f7f90a7-3930-472e-9571-501a173d70c0"/>
+			</line>
+		</band>
+		<band height="45" splitType="Immediate">
+			<subreport>
+				<reportElement positionType="Float" x="0" y="0" width="555" height="40" uuid="82d1a595-a03c-4664-a01d-2ee6c4fc717c"/>
+				<subreportParameter name="csid">
+					<subreportParameterExpression><![CDATA[$F{condcsid}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="tenantid">
+					<subreportParameterExpression><![CDATA[$P{tenantid}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA["subreport_hazard.jasper"]]></subreportExpression>
+			</subreport>
+		</band>
+	</detail>
+</jasperReport>
