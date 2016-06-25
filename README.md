@@ -1,26 +1,29 @@
 ## Jaspersoft Reports for CollectionSpace
 This is a collection of Jaspersoft reports for Oakland Museum's CollectionSpace instance. 
 
-N.B. Many of these reports use SQL queries specifically created to call from custom postgres tables and will produece errors when added to a default CollectionSpace system. 
+N.B. Many of these reports use SQL queries specifically created to call from custom postgres tables and will generate errors when added to a default CollectionSpace system.
+
+## Subreports
+A number of subreports were created that are referenced within a parent report. They are named with a **subreport_** prefix. Their corresponding .jasper files are also included as the compiled version of the subreport are called from within the parent report.
 
 ## Parameters
 There are a few parameters used in these reports that will need to be updated for other custom CollectionSpace instances.
-* $P{tenantid} - the custom tenant ID. In these reports the custom OMCA tenant is 35
+* $P{tenantid} - the custom tenant ID. The default value is the OMCA tenant ID, "35".
 * $P{csid} -  useful for local testing using Jaspersoft Studio (or older iReports). The default value is ignored when run within CollectionSpace
-* $P{cspace_server} - this is used for creating links to a specific server. This parameter is used in two ways within these reports
-  * creating a link to a specific record within the CollectionSpace server
-  * creating a link to a script that pulls in media blobs (see **Media blobs** section below.)
+* $P{cspace_server} - this is used for creating links to a specific server. This parameter is used in a few ways within these reports
+  * adding a link to the record CSID that opens the full record view in a browser (not applicable in the PDF report, unfortunately.)
+  * linking to a script that pulls in media blobs (see **Media blobs** section below.)
 
 
 ## Media blobs
-Many of these reports pull in an image for each Cataloging record that returned. It is important to note that CollectionSpace doesn't  provide a means to request images from the database but rather through the backend API. For this, a small custom script was created that given a media blob CSID value will fetch the respective image. 
+Many of these reports pull in an image for each Cataloging record that returned. It is important to note that CollectionSpace doesn't  provide a means to request images from the database but rather through the backend API. For this, a small custom script was created that when given a media blob CSID value will return the respective image. 
 
 For these reports the custom script tag is wrapped within an \<imageExpression/\> tag
 ```xml
 <imageExpression><![CDATA["http://" + $P{cspace_server} +  "/fetchimage/index.php?csid=" + $F{blobcsid}]]></imageExpression>
 ```
 
-This specific custom script is not provided for this repository but is easy enough to create using a scripting language of your choice and a cURL like method. 
+This specific custom script is not provided for this repository but is easy enough to create using a scripting language of your choice and a cURL-like method. Care must be placed to avoid opening up this access point to the world, of course!
 
 ## Adding a report to CollectionSpace
 
@@ -29,7 +32,7 @@ Comprehensive instructions are provided from the [CollectionSpace configuration 
 Simplified instructions follow.
 
 ### Report location
-All reports should live in the following server directory:
+All reports including subreports should live in the following server directory:
 ```
 /usr/local/share/apache-tomcat-7.0.57/cspace/reports
 ```
