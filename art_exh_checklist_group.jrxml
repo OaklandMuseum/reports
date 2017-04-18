@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Created with Jaspersoft Studio version 6.3.0.final using JasperReports Library version 6.3.0  -->
-<!-- 2017-02-15T17:27:58 -->
+<!-- 2017-02-16T15:48:59 -->
 <jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Art Gallery Label with Image" pageWidth="595" pageHeight="842" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20" uuid="5be5b01d-525f-477a-adeb-30d93fa521ff">
 	<property name="com.jaspersoft.studio.data.sql.tables" value=""/>
 	<property name="net.sf.jasperreports.print.create.bookmarks" value="false"/>
-	<property name="com.jaspersoft.studio.data.defaultdataadapter" value="omca-digocean.xml"/>
+	<property name="com.jaspersoft.studio.data.defaultdataadapter" value="One Empty Record"/>
 	<parameter name="tenantid" class="java.lang.String" isForPrompting="false">
 		<defaultValueExpression><![CDATA["35"]]></defaultValueExpression>
 	</parameter>
 	<parameter name="csid" class="java.lang.String" isForPrompting="false">
-		<defaultValueExpression><![CDATA["d8a240f8-59b2-4a5f-8a3d"]]></defaultValueExpression>
+		<defaultValueExpression><![CDATA["f7cbb888-e92a-4390-b8c2"]]></defaultValueExpression>
 	</parameter>
 	<parameter name="cspace_server" class="java.lang.String" isForPrompting="false">
 		<parameterDescription><![CDATA[CSpace server address]]></parameterDescription>
@@ -28,7 +28,7 @@
     comca.sortableobjectnumber sortableobjectnumber,
     h2.name objcsid,
     comca.argusDescription argusDescription,
-
+    
     --sd.datedisplaydate objectProductionDate,
     array_to_string(array_agg(DISTINCT (h3.pos, sd.datedisplaydate)),';;') AS objectProductionDate,
 
@@ -37,6 +37,15 @@
 
     --tg.title objectTitle,
     array_to_string(array_agg(DISTINCT (h5.pos, tg.title)),';;') AS objectTitle,
+
+    --ong.objectname objectname,
+    array_to_string(array_agg(DISTINCT (h6.pos, regexp_replace(ong.objectname, '^.*\)''(.*)''$', '\1'))),';;') AS objectname,
+
+    --oppg.objectProductionPerson maker,
+    array_to_string(array_agg(DISTINCT (h7.pos, substring(oppg.objectProductionPerson, position(')''' IN oppg.objectProductionPerson)+2, length(oppg.objectProductionPerson)-position(')''' IN oppg.objectProductionPerson)-2))),';;') AS maker,
+
+    --opog.objectproductionorganization production_org,
+    array_to_string(array_agg(DISTINCT (h8.pos, substring(opog.objectproductionorganization, position(')''' IN opog.objectProductionorganization)+2, length(opog.objectProductionorganization)-position(')''' IN opog.objectProductionorganization)-2))),';;') AS production_org,
 
     -- creditline; sortby acquisitionreferencenumber
 (SELECT COALESCE(
@@ -69,8 +78,9 @@
         LEFT OUTER JOIN media_common med ON (hmed.id = med.id)
         LEFT OUTER JOIN media_omca momca ON (med.id = momca.id)
         LEFT OUTER JOIN misc ON (misc.id = med.id)
-        WHERE h2.name = rmed.subjectcsid AND rmed.objectdocumenttype = 'Media' AND momca.isPrimary = 'True' AND misc.lifecyclestate <> 'deleted'
-        ORDER BY med.identificationNumber DESC
+        LEFT OUTER JOIN collectionspace_core c ON (c.id =med.id)
+        WHERE h2.name = rmed.subjectcsid AND rmed.objectdocumenttype = 'Media' AND misc.lifecyclestate <> 'deleted'
+        ORDER BY c.updatedat DESC
         LIMIT 1
     ) AS blobCSID
 
@@ -93,7 +103,19 @@ FROM groups_common gc
     -- objectTitle
     LEFT OUTER JOIN hierarchy h5 ON (co.id = h5.parentid AND h5.name = 'collectionobjects_common:titleGroupList')
     LEFT OUTER JOIN titleGroup tg ON (h5.id = tg.id)
+    
+    -- objectName
+    LEFT OUTER JOIN hierarchy h6 ON (co.id = h6.parentid AND h6.name = 'collectionobjects_common:objectNameList')
+    LEFT OUTER JOIN objectnamegroup ong ON (h6.id = ong.id)
 
+    -- maker
+    LEFT OUTER JOIN hierarchy h7 ON (co.id = h7.parentid AND h7.name = 'collectionobjects_common:objectProductionPersonGroupList')
+    LEFT OUTER JOIN objectProductionPersonGroup oppg ON (h7.id = oppg.id)
+
+    -- production_org
+    LEFT OUTER JOIN hierarchy h8 ON (co.id = h8.parentid AND h8.name = 'collectionobjects_common:objectProductionOrganizationGroupList')
+    LEFT OUTER JOIN objectProductionorganizationGroup opog ON (h8.id = opog.id)
+  
     INNER JOIN misc ON (misc.id = co.id AND misc.lifecyclestate <> 'deleted')
     INNER JOIN collectionspace_core core ON (core.id = co.id)
     INNER JOIN collectionobjects_omca comca ON (co.id = comca.id)
@@ -117,6 +139,9 @@ ORDER BY comca.sortableobjectnumber ASC]]>
 	<field name="objecttitle" class="java.lang.String"/>
 	<field name="creditline" class="java.lang.String"/>
 	<field name="blobcsid" class="java.lang.String"/>
+	<field name="objectname" class="java.lang.String"/>
+	<field name="maker" class="java.lang.String"/>
+	<field name="production_org" class="java.lang.String"/>
 	<background>
 		<band splitType="Stretch"/>
 	</background>
@@ -128,7 +153,7 @@ ORDER BY comca.sortableobjectnumber ASC]]>
 				<textElement>
 					<font size="14"/>
 				</textElement>
-				<text><![CDATA[OMCA Art Gallery Label]]></text>
+				<text><![CDATA[OMCA Art Exhibition Checklist]]></text>
 			</staticText>
 			<textField pattern="MMMMM dd, yyyy HH:mm">
 				<reportElement x="435" y="0" width="120" height="20" uuid="64f0db6b-ad5c-41fc-97da-931030dd3d40"/>
@@ -175,142 +200,10 @@ ORDER BY comca.sortableobjectnumber ASC]]>
 		</band>
 	</title>
 	<detail>
-		<band height="225" splitType="Stretch">
+		<band height="142" splitType="Stretch">
 			<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
-			<staticText>
-				<reportElement positionType="Float" mode="Transparent" x="0" y="10" width="180" height="15" backcolor="#FFFFFF" uuid="47ca2500-11ad-4af0-93ed-8308e4fabfb4">
-					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
-				</reportElement>
-				<box topPadding="0" leftPadding="0" bottomPadding="0" rightPadding="0">
-					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
-					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
-					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
-					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
-				</box>
-				<textElement textAlignment="Left" verticalAlignment="Bottom">
-					<font isBold="true"/>
-				</textElement>
-				<text><![CDATA[Object ID]]></text>
-			</staticText>
-			<textField isStretchWithOverflow="true" evaluationTime="Auto" isBlankWhenNull="true" hyperlinkType="Reference" hyperlinkTarget="Blank">
-				<reportElement positionType="Float" x="0" y="25" width="400" height="20" uuid="b9533ed6-3c5a-4d2f-9b02-3c2a236a28de">
-					<property name="com.jaspersoft.studio.unit.width" value="pixel"/>
-					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
-					<property name="com.jaspersoft.studio.unit.x" value="pixel"/>
-				</reportElement>
-				<box topPadding="4" leftPadding="0" bottomPadding="2" rightPadding="0">
-					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
-					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
-					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
-					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
-				</box>
-				<textElement verticalAlignment="Top"/>
-				<textFieldExpression><![CDATA[$F{objectnumber}]]></textFieldExpression>
-				<hyperlinkReferenceExpression><![CDATA["http://"+ $P{cspace_server} + ":8180/collectionspace/ui/omca/html/cataloging.html?csid=" + $F{objcsid}]]></hyperlinkReferenceExpression>
-			</textField>
-			<staticText>
-				<reportElement positionType="Float" x="0" y="45" width="180" height="15" uuid="60d12235-f6a7-4619-9504-97c374da8bc2">
-					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
-				</reportElement>
-				<box topPadding="0" leftPadding="0" rightPadding="0"/>
-				<textElement textAlignment="Left" verticalAlignment="Bottom">
-					<font isBold="true"/>
-				</textElement>
-				<text><![CDATA[Title]]></text>
-			</staticText>
-			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
-				<reportElement positionType="Float" x="0" y="60" width="400" height="20" uuid="cc532d64-2e4c-4396-9a57-8fb20d78f72d">
-					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
-				</reportElement>
-				<box topPadding="4" leftPadding="0" bottomPadding="2" rightPadding="0">
-					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
-					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
-					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
-					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
-				</box>
-				<textElement verticalAlignment="Top">
-					<paragraph lineSpacing="1_1_2"/>
-				</textElement>
-				<textFieldExpression><![CDATA[$F{objecttitle}.replaceAll("\\([0-9]*,\"?|\"?\\)","").replaceAll(";;", "\n")]]></textFieldExpression>
-			</textField>
-			<staticText>
-				<reportElement positionType="Float" x="0" y="80" width="180" height="15" uuid="08e62652-c6f9-4f6d-84b6-e2ab97e828f3">
-					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
-				</reportElement>
-				<box topPadding="0" leftPadding="0" rightPadding="0"/>
-				<textElement textAlignment="Left" verticalAlignment="Bottom">
-					<font isBold="true"/>
-				</textElement>
-				<text><![CDATA[Production Date]]></text>
-			</staticText>
-			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
-				<reportElement positionType="Float" x="0" y="95" width="400" height="20" uuid="320f5077-189f-44eb-b8ce-fc58eda923de">
-					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
-				</reportElement>
-				<box topPadding="4" leftPadding="0" rightPadding="0"/>
-				<textElement verticalAlignment="Top">
-					<paragraph lineSpacing="1_1_2"/>
-				</textElement>
-				<textFieldExpression><![CDATA[$F{objectproductiondate}.replaceAll("\\([0-9]*,\"?|\"?\\)","").replaceAll(";;", "\n")]]></textFieldExpression>
-			</textField>
-			<staticText>
-				<reportElement positionType="Float" x="0" y="115" width="180" height="15" uuid="3473bf9b-6793-41ad-8f67-e4114c7b271d">
-					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
-				</reportElement>
-				<box topPadding="0" leftPadding="0" rightPadding="0"/>
-				<textElement textAlignment="Left" verticalAlignment="Bottom">
-					<font isBold="true"/>
-				</textElement>
-				<text><![CDATA[Argus Description]]></text>
-			</staticText>
-			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
-				<reportElement positionType="Float" x="0" y="130" width="400" height="20" uuid="c415f399-2dae-4e9e-afaa-882cbc52d46b">
-					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
-				</reportElement>
-				<box topPadding="4" leftPadding="0" rightPadding="0"/>
-				<textElement verticalAlignment="Top"/>
-				<textFieldExpression><![CDATA[$F{argusdescription}]]></textFieldExpression>
-			</textField>
-			<staticText>
-				<reportElement positionType="Float" x="0" y="150" width="180" height="15" uuid="e70d0f96-8004-4602-b9a6-2509d65e59cc">
-					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
-				</reportElement>
-				<box topPadding="0" leftPadding="0" rightPadding="0"/>
-				<textElement textAlignment="Left" verticalAlignment="Bottom">
-					<font size="10" isBold="true"/>
-				</textElement>
-				<text><![CDATA[Dimension Summary]]></text>
-			</staticText>
-			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
-				<reportElement positionType="Float" x="0" y="165" width="400" height="20" uuid="9eba880e-5b0d-41de-8bd9-895e98f7caec">
-					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
-				</reportElement>
-				<box topPadding="4" leftPadding="0" rightPadding="0"/>
-				<textElement verticalAlignment="Top">
-					<paragraph lineSpacing="1_1_2"/>
-				</textElement>
-				<textFieldExpression><![CDATA[$F{dimensionsummary}.replaceAll("\\([0-9]*,\"?|\"?\\)","").replaceAll(";;", "\n")]]></textFieldExpression>
-			</textField>
-			<staticText>
-				<reportElement positionType="Float" x="0" y="185" width="180" height="15" uuid="03da4d2b-f078-40d8-ad2b-fa0feaa645de">
-					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
-				</reportElement>
-				<box topPadding="0" leftPadding="0" rightPadding="0"/>
-				<textElement textAlignment="Left" verticalAlignment="Bottom">
-					<font isBold="true"/>
-				</textElement>
-				<text><![CDATA[Credit Line]]></text>
-			</staticText>
-			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
-				<reportElement positionType="Float" x="0" y="200" width="555" height="20" uuid="b562ecb6-48b4-4c7d-8613-5fa03c96b10d">
-					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
-				</reportElement>
-				<box topPadding="4" leftPadding="0" rightPadding="0"/>
-				<textElement verticalAlignment="Top"/>
-				<textFieldExpression><![CDATA[$F{creditline}]]></textFieldExpression>
-			</textField>
 			<image hAlign="Center" vAlign="Top" isUsingCache="true" isLazy="true">
-				<reportElement key="" x="410" y="10" width="145" height="170" uuid="97535ba2-c649-42d7-9969-6b08be4b77e5">
+				<reportElement key="" x="-11" y="13" width="142" height="120" uuid="97535ba2-c649-42d7-9969-6b08be4b77e5">
 					<printWhenExpression><![CDATA[!$F{blobcsid}.isEmpty()]]></printWhenExpression>
 				</reportElement>
 				<box padding="1" topPadding="0" leftPadding="1">
@@ -321,11 +214,93 @@ ORDER BY comca.sortableobjectnumber ASC]]>
 				</box>
 				<imageExpression><![CDATA["http://" + $P{cspace_server} + "/fetchimage/index.php?csid=" + $F{blobcsid}]]></imageExpression>
 			</image>
+			<textField isStretchWithOverflow="true" evaluationTime="Auto" isBlankWhenNull="true" hyperlinkType="Reference" hyperlinkTarget="Blank">
+				<reportElement positionType="Float" x="435" y="10" width="120" height="20" uuid="b9533ed6-3c5a-4d2f-9b02-3c2a236a28de">
+					<property name="com.jaspersoft.studio.unit.width" value="pixel"/>
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+					<property name="com.jaspersoft.studio.unit.x" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" bottomPadding="2" rightPadding="0">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Top">
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{objectnumber}]]></textFieldExpression>
+				<hyperlinkReferenceExpression><![CDATA["http://"+ $P{cspace_server} + ":8180/collectionspace/ui/omca/html/cataloging.html?csid=" + $F{objcsid}]]></hyperlinkReferenceExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="140" y="30" width="415" height="20" uuid="cc532d64-2e4c-4396-9a57-8fb20d78f72d">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" bottomPadding="2" rightPadding="0">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement verticalAlignment="Top">
+					<font isBold="true" isItalic="true"/>
+					<paragraph lineSpacing="1_1_2"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{objecttitle}.replaceAll("\\([0-9]*,\"?|\"?\\)","").replaceAll(";;", "\n")]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="140" y="110" width="75" height="20" uuid="320f5077-189f-44eb-b8ce-fc58eda923de">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0"/>
+				<textElement textAlignment="Left" verticalAlignment="Top">
+					<paragraph lineSpacing="1_1_2"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{objectproductiondate}.replaceAll("\\([0-9]*,\"?|\"?\\)","").replaceAll(";;", "\n")]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="140" y="50" width="415" height="20" uuid="c415f399-2dae-4e9e-afaa-882cbc52d46b">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" bottomPadding="2" rightPadding="0"/>
+				<textElement verticalAlignment="Top">
+					<font isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{argusdescription}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="140" y="70" width="180" height="20" uuid="9eba880e-5b0d-41de-8bd9-895e98f7caec">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0"/>
+				<textElement verticalAlignment="Top">
+					<paragraph lineSpacing="1_1_2"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{dimensionsummary}.replaceAll("\\([0-9]*,\"?|\"?\\)","").replaceAll(";;", "\n")]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="140" y="90" width="415" height="20" uuid="b562ecb6-48b4-4c7d-8613-5fa03c96b10d">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0"/>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[$F{creditline}]]></textFieldExpression>
+			</textField>
 			<line>
 				<reportElement x="0" y="0" width="555" height="1" uuid="bb436971-2912-4c91-bb96-3832301b47a3">
 					<property name="com.jaspersoft.studio.unit.width" value="pixel"/>
 				</reportElement>
 			</line>
+			<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="140" y="10" width="280" height="20" uuid="3992d480-c1af-442a-8b38-944ca5fd55a9">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" rightPadding="0"/>
+				<textElement verticalAlignment="Top">
+					<paragraph lineSpacing="Single"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{maker}.replaceAll("\\([0-9]*,\"?|\"?\\)","").replaceAll(";;", "\n")]]></textFieldExpression>
+			</textField>
 		</band>
 	</detail>
 	<pageFooter>

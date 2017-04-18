@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Created with Jaspersoft Studio version 6.3.0.final using JasperReports Library version 6.3.0  -->
-<!-- 2017-02-15T23:55:30 -->
-<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Public Research with Image - Cataloging" pageWidth="595" pageHeight="842" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20" uuid="5be5b01d-525f-477a-adeb-30d93fa521ff">
+<!-- 2017-02-16T16:05:09 -->
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Public Research with Image - Group" pageWidth="595" pageHeight="842" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20" uuid="5be5b01d-525f-477a-adeb-30d93fa521ff">
 	<property name="com.jaspersoft.studio.data.sql.tables" value=""/>
 	<property name="net.sf.jasperreports.print.create.bookmarks" value="false"/>
 	<property name="com.jaspersoft.studio.data.defaultdataadapter" value="One Empty Record"/>
@@ -9,7 +9,7 @@
 		<defaultValueExpression><![CDATA["35"]]></defaultValueExpression>
 	</parameter>
 	<parameter name="csid" class="java.lang.String" isForPrompting="false">
-		<defaultValueExpression><![CDATA["1449fdd4-6d71-4440-9b80"]]></defaultValueExpression>
+		<defaultValueExpression><![CDATA["d8a240f8-59b2-4a5f-8a3d"]]></defaultValueExpression>
 	</parameter>
 	<parameter name="cspace_server" class="java.lang.String" isForPrompting="false">
 		<parameterDescription><![CDATA[CSpace server address]]></parameterDescription>
@@ -17,18 +17,21 @@
 	</parameter>
 	<queryString>
 		<![CDATA[SELECT
+    gc.title grouptitle,
+    CASE WHEN (gc.owner IS NOT NULL AND gc.owner <> '') THEN
+        regexp_replace(gc.owner, '^.*\)''(.*)''$', '\1')
+        ELSE ''
+    END AS groupOwner,
+    gc.scopenote scopenote,
     co.id objectid,
-    h1.name objcsid,
-    co.objectnumber objectNumber,
+    co.objectnumber objectnumber,
     comca.sortableobjectnumber sortableobjectnumber,
-    co.physicalDescription physicalDescription,
+    h2.name objcsid,
     comca.argusDescription materialtechniquesummary,
+    comca.argusRemarks argusremarks,
+    co.physicalDescription physicaldescription,
     co.contentDescription contentdescription,
     co.distinguishingFeatures curatorialremarks,
-    comca.argusRemarks argusRemarks,
-   
-    --tg.title objectTitle,
-    array_to_string(array_agg(DISTINCT (h2.pos, tg.title)),';;') AS objectTitle,
 
     --sd.datedisplaydate objectProductionDate,
     array_to_string(array_agg(DISTINCT (h3.pos, sd.datedisplaydate)),';;') AS objectProductionDate,
@@ -36,23 +39,26 @@
     --mpg.dimensionSummary dimensionSummary,
     array_to_string(array_agg(DISTINCT (h4.pos, mpg.dimensionSummary)),';;') AS dimensionSummary,
 
-    --oppg.objectProductionPerson maker,
-    array_to_string(array_agg(DISTINCT (h5.pos, substring(oppg.objectProductionPerson, position(')''' IN oppg.objectProductionPerson)+2, length(oppg.objectProductionPerson)-position(')''' IN oppg.objectProductionPerson)-2))),';;') AS maker,
+    --tg.title objectTitle,
+    array_to_string(array_agg(DISTINCT (h5.pos, tg.title)),';;') AS objectTitle,
 
     --ong.objectName objectName,
     array_to_string(array_agg(DISTINCT (h6.pos, substring(ong.objectName, position(')''' IN ong.objectName)+2, length(ong.objectName)-position(')''' IN ong.objectName)-2))),';;') AS objectName,
-    
-    --dhg.dhname taxon,
-    array_to_string(array_agg(DISTINCT (h7.pos, substring(dhg.dhname, position(')''' IN dhg.dhname)+2, length(dhg.dhname)-position(')''' IN dhg.dhname)-2))),';;') AS taxon,
 
+    --oppg.objectProductionPerson maker,
+    array_to_string(array_agg(DISTINCT (h7.pos, substring(oppg.objectProductionPerson, position(')''' IN oppg.objectProductionPerson)+2, length(oppg.objectProductionPerson)-position(')''' IN oppg.objectProductionPerson)-2))),';;') AS maker,
+	
+	--dhg.dhname taxon,
+	array_to_string(array_agg(DISTINCT (h8.pos, substring(dhg.dhname, position(')''' IN dhg.dhname)+2, length(dhg.dhname)-position(')''' IN dhg.dhname)-2))),';;') AS taxon,
+    
     -- creditline; sortby acquisitionreferencenumber
-(SELECT COALESCE(
+    (SELECT COALESCE(
      	(SELECT string_agg(li.creditline,' ' ORDER BY li.sortableloaninnumber)
         FROM relations_common rli
         LEFT OUTER JOIN hierarchy hli ON (hli.name = rli.objectcsid)
         LEFT OUTER JOIN loansin_omca li ON (hli.id = li.id)
         LEFT OUTER JOIN misc ON (misc.id = li.id)
-        WHERE h1.name = rli.subjectcsid AND rli.objectdocumenttype = 'Loanin' AND misc.lifecyclestate <> 'deleted'
+        WHERE h2.name = rli.subjectcsid AND rli.objectdocumenttype = 'Loanin' AND misc.lifecyclestate <> 'deleted'
         GROUP BY li.sortableloaninnumber
         ORDER BY li.sortableloaninnumber DESC
         LIMIT 1
@@ -62,7 +68,7 @@
         LEFT OUTER JOIN hierarchy hacq ON (hacq.name = racq.objectcsid)
         LEFT OUTER JOIN acquisitions_common acq ON (hacq.id = acq.id)
         LEFT OUTER JOIN misc ON (misc.id = acq.id)
-        WHERE h1.name = racq.subjectcsid AND racq.objectdocumenttype = 'Acquisition' AND misc.lifecyclestate <> 'deleted'
+        WHERE h2.name = racq.subjectcsid AND racq.objectdocumenttype = 'Acquisition' AND misc.lifecyclestate <> 'deleted'
         GROUP BY acq.acquisitionreferencenumber
         ORDER BY acq.acquisitionreferencenumber DESC
         LIMIT 1) 
@@ -77,18 +83,18 @@
         LEFT OUTER JOIN media_omca momca ON (med.id = momca.id)
         LEFT OUTER JOIN misc ON (misc.id = med.id)
         LEFT OUTER JOIN collectionspace_core c ON (c.id =med.id)
-        WHERE h1.name = rmed.subjectcsid AND rmed.objectdocumenttype = 'Media' AND misc.lifecyclestate <> 'deleted'
+        WHERE h2.name = rmed.subjectcsid AND rmed.objectdocumenttype = 'Media' AND misc.lifecyclestate <> 'deleted'
         ORDER BY c.updatedat DESC
         LIMIT 1
     ) AS blobCSID
 
-FROM collectionobjects_common co
+FROM groups_common gc
 
-    JOIN hierarchy h1 ON (co.id = h1.id)
+    JOIN hierarchy h1 ON (gc.id=h1.id)
+    JOIN relations_common rc1 ON (h1.name=rc1.subjectcsid)
 
-    -- objectTitle
-    LEFT OUTER JOIN hierarchy h2 ON (co.id = h2.parentid AND h2.name = 'collectionobjects_common:titleGroupList')
-    LEFT OUTER JOIN titleGroup tg ON (h2.id = tg.id)
+    JOIN hierarchy h2 ON (rc1.objectcsid=h2.name)
+    JOIN collectionobjects_common co ON (h2.id=co.id)
 
     -- objectProductionDate
     LEFT OUTER JOIN hierarchy h3 ON (co.id = h3.parentid AND h3.name = 'collectionobjects_common:objectProductionDateGroupList')
@@ -98,42 +104,49 @@ FROM collectionobjects_common co
     LEFT OUTER JOIN hierarchy h4 ON (co.id = h4.parentid AND h4.name = 'collectionobjects_common:measuredPartGroupList')
     LEFT OUTER JOIN measuredpartgroup mpg ON (h4.id = mpg.id)
 
-    -- maker
-    LEFT OUTER JOIN hierarchy h5 ON (co.id = h5.parentid AND h5.name = 'collectionobjects_common:objectProductionPersonGroupList')
-    LEFT OUTER JOIN objectProductionPersonGroup oppg ON (h5.id = oppg.id)
+    -- objectTitle
+    LEFT OUTER JOIN hierarchy h5 ON (co.id = h5.parentid AND h5.name = 'collectionobjects_common:titleGroupList')
+    LEFT OUTER JOIN titleGroup tg ON (h5.id = tg.id)
 
     -- objectName
-    LEFT OUTER JOIN hierarchy h6 ON (co.id = h6.parentid AND h6.primarytype='objectNameGroup')
-    LEFT OUTER JOIN objectnamegroup ong ON (ong.id=h6.id)
-    
-    -- taxon
-    LEFT OUTER JOIN hierarchy h7 ON (co.id = h7.parentid and h7.primarytype = 'determinationHistoryGroup')
-    LEFT OUTER JOIN determinationhistorygroup dhg ON (dhg.id = h7.id)
+    LEFT OUTER JOIN hierarchy h6 ON (co.id = h6.parentid AND h6.primarytype = 'objectNameGroup')
+    LEFT OUTER JOIN objectnamegroup ong ON (ong.id = h6.id)
 
+    -- maker
+    LEFT OUTER JOIN hierarchy h7 ON (co.id = h7.parentid AND h7.name = 'collectionobjects_common:objectProductionPersonGroupList')
+    LEFT OUTER JOIN objectProductionPersonGroup oppg ON (h7.id = oppg.id)
+
+    -- taxon
+    LEFT OUTER JOIN hierarchy h8 ON (co.id = h8.parentid and h8.primarytype = 'determinationHistoryGroup')
+    LEFT OUTER JOIN determinationhistorygroup dhg ON (dhg.id = h8.id)
+	
     INNER JOIN misc ON (misc.id = co.id AND misc.lifecyclestate <> 'deleted')
-    INNER JOIN collectionspace_core core ON core.id = co.id
+    INNER JOIN collectionspace_core core ON (core.id = co.id)
     INNER JOIN collectionobjects_omca comca ON (co.id = comca.id)
 
-WHERE core.tenantid = $P{tenantid} AND h1.name=$P{csid}
+WHERE core.tenantid=$P{tenantid} AND h1.name=$P{csid}
 
-GROUP BY objectid, objectNumber, sortableobjectnumber, materialtechniquesummary, physicalDescription, contentdescription, curatorialremarks, argusremarks, h1.name
+GROUP BY grouptitle, groupOwner, scopenote, objectid, objectnumber, sortableobjectnumber, objcsid, materialtechniquesummary, argusremarks, physicaldescription, contentdescription, curatorialremarks
 
-ORDER BY sortableobjectnumber ASC]]>
+ORDER BY objectName ASC]]>
 	</queryString>
+	<field name="grouptitle" class="java.lang.String"/>
+	<field name="groupowner" class="java.lang.String"/>
+	<field name="scopenote" class="java.lang.String"/>
 	<field name="objectid" class="java.lang.String"/>
-	<field name="objcsid" class="java.lang.String"/>
 	<field name="objectnumber" class="java.lang.String"/>
 	<field name="sortableobjectnumber" class="java.lang.String"/>
-	<field name="physicaldescription" class="java.lang.String"/>
+	<field name="objcsid" class="java.lang.String"/>
 	<field name="materialtechniquesummary" class="java.lang.String"/>
+	<field name="argusremarks" class="java.lang.String"/>
+	<field name="physicaldescription" class="java.lang.String"/>
 	<field name="contentdescription" class="java.lang.String"/>
 	<field name="curatorialremarks" class="java.lang.String"/>
-	<field name="argusremarks" class="java.lang.String"/>
-	<field name="objecttitle" class="java.lang.String"/>
 	<field name="objectproductiondate" class="java.lang.String"/>
 	<field name="dimensionsummary" class="java.lang.String"/>
-	<field name="maker" class="java.lang.String"/>
+	<field name="objecttitle" class="java.lang.String"/>
 	<field name="objectname" class="java.lang.String"/>
+	<field name="maker" class="java.lang.String"/>
 	<field name="taxon" class="java.lang.String"/>
 	<field name="creditline" class="java.lang.String"/>
 	<field name="blobcsid" class="java.lang.String"/>
@@ -154,10 +167,48 @@ ORDER BY sortableobjectnumber ASC]]>
 				<reportElement x="435" y="0" width="120" height="20" uuid="64f0db6b-ad5c-41fc-97da-931030dd3d40"/>
 				<textFieldExpression><![CDATA[new java.util.Date()]]></textFieldExpression>
 			</textField>
+			<staticText>
+				<reportElement mode="Transparent" x="0" y="20" width="80" height="19" backcolor="#FFFFFF" uuid="d2686650-fa1b-4ef8-b946-97005ea65a7c"/>
+				<box topPadding="0" leftPadding="2" bottomPadding="0" rightPadding="0">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement verticalAlignment="Top">
+					<font isBold="false"/>
+				</textElement>
+				<text><![CDATA[Group Name:]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="80" y="20" width="270" height="19" uuid="737bfa1d-7c42-4064-ba87-e1bc6e69dc84"/>
+				<textFieldExpression><![CDATA[$F{grouptitle}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement mode="Transparent" x="0" y="39" width="80" height="19" backcolor="#FFFFFF" uuid="5cd43eb7-5174-4e82-ae64-59023dafcced"/>
+				<box topPadding="0" leftPadding="2" bottomPadding="0" rightPadding="0">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement verticalAlignment="Top">
+					<font isBold="false"/>
+				</textElement>
+				<text><![CDATA[Group Owner:]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="80" y="39" width="270" height="19" uuid="39982f52-4658-4d16-81f7-29411eb6b6d1"/>
+				<textFieldExpression><![CDATA[$F{groupowner}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement x="360" y="20" width="195" height="38" uuid="dd3e3d46-6afc-445a-b302-12622fdc270f"/>
+				<textFieldExpression><![CDATA[$F{scopenote}]]></textFieldExpression>
+			</textField>
 		</band>
 	</title>
 	<detail>
-		<band height="465" splitType="Stretch">
+		<band height="505" splitType="Stretch">
 			<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
 			<staticText>
 				<reportElement positionType="Float" mode="Transparent" x="0" y="10" width="180" height="15" backcolor="#FFFFFF" uuid="47ca2500-11ad-4af0-93ed-8308e4fabfb4">
@@ -276,7 +327,31 @@ ORDER BY sortableobjectnumber ASC]]>
 				<textFieldExpression><![CDATA[$F{materialtechniquesummary}]]></textFieldExpression>
 			</textField>
 			<staticText>
-				<reportElement positionType="Float" x="0" y="255" width="180" height="15" uuid="f0c2be3f-5406-45e1-baa9-cde4c4e513fa"/>
+				<reportElement positionType="Float" x="0" y="255" width="180" height="15" uuid="0ca19802-8460-4f97-84d2-239cdedecc8b"/>
+				<box topPadding="0" leftPadding="0" rightPadding="0"/>
+				<textElement textAlignment="Left" verticalAlignment="Bottom">
+					<font isBold="true"/>
+				</textElement>
+				<text><![CDATA[Production Date]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="270" width="555" height="20" uuid="313f509b-874a-4ead-b200-11666f608fe2">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+					<property name="com.jaspersoft.studio.unit.width" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" bottomPadding="2" rightPadding="0">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement verticalAlignment="Top">
+					<paragraph lineSpacing="1_1_2"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{objectproductiondate}.replaceAll("\\([0-9]*,\"?|\"?\\)","").replaceAll(";;", "\n")]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement positionType="Float" x="0" y="290" width="180" height="15" uuid="f0c2be3f-5406-45e1-baa9-cde4c4e513fa"/>
 				<box topPadding="0" leftPadding="0" rightPadding="0"/>
 				<textElement textAlignment="Left" verticalAlignment="Bottom">
 					<font isBold="true"/>
@@ -284,7 +359,7 @@ ORDER BY sortableobjectnumber ASC]]>
 				<text><![CDATA[Dimension Summary]]></text>
 			</staticText>
 			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
-				<reportElement positionType="Float" x="0" y="270" width="555" height="20" uuid="f651b6ef-ceb5-4c99-8487-7c2d82e31bec"/>
+				<reportElement positionType="Float" x="0" y="305" width="555" height="20" uuid="f651b6ef-ceb5-4c99-8487-7c2d82e31bec"/>
 				<box topPadding="4" leftPadding="0" bottomPadding="2" rightPadding="0"/>
 				<textElement verticalAlignment="Top">
 					<paragraph lineSpacing="1_1_2"/>
@@ -292,7 +367,7 @@ ORDER BY sortableobjectnumber ASC]]>
 				<textFieldExpression><![CDATA[$F{dimensionsummary}.replaceAll("\\([0-9]*,\"?|\"?\\)","").replaceAll(";;", "\n")]]></textFieldExpression>
 			</textField>
 			<staticText>
-				<reportElement positionType="Float" x="0" y="290" width="180" height="15" uuid="632b907d-e8f6-4a39-af6d-6a7cce2fe19d"/>
+				<reportElement positionType="Float" x="0" y="325" width="180" height="15" uuid="632b907d-e8f6-4a39-af6d-6a7cce2fe19d"/>
 				<box topPadding="0" leftPadding="0" rightPadding="0"/>
 				<textElement textAlignment="Left" verticalAlignment="Bottom">
 					<font isBold="true"/>
@@ -300,13 +375,13 @@ ORDER BY sortableobjectnumber ASC]]>
 				<text><![CDATA[Argus Remarks]]></text>
 			</staticText>
 			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
-				<reportElement positionType="Float" x="0" y="305" width="555" height="20" uuid="4039787f-3258-4877-b324-e4842407d029"/>
+				<reportElement positionType="Float" x="0" y="340" width="555" height="20" uuid="4039787f-3258-4877-b324-e4842407d029"/>
 				<box topPadding="4" leftPadding="0" bottomPadding="2" rightPadding="0"/>
 				<textElement verticalAlignment="Top"/>
 				<textFieldExpression><![CDATA[$F{argusremarks}]]></textFieldExpression>
 			</textField>
 			<staticText>
-				<reportElement positionType="Float" x="0" y="325" width="180" height="15" uuid="6d752bdc-abac-404a-a4c4-c2c62ca27c88"/>
+				<reportElement positionType="Float" x="0" y="360" width="180" height="15" uuid="6d752bdc-abac-404a-a4c4-c2c62ca27c88"/>
 				<box topPadding="0" leftPadding="0" rightPadding="0"/>
 				<textElement textAlignment="Left" verticalAlignment="Bottom">
 					<font size="10" isBold="true"/>
@@ -314,13 +389,13 @@ ORDER BY sortableobjectnumber ASC]]>
 				<text><![CDATA[Physical Description]]></text>
 			</staticText>
 			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
-				<reportElement positionType="Float" x="0" y="340" width="555" height="20" uuid="9a4d352c-09c0-456c-a24a-99f3e5c14490"/>
+				<reportElement positionType="Float" x="0" y="375" width="555" height="20" uuid="9a4d352c-09c0-456c-a24a-99f3e5c14490"/>
 				<box topPadding="4" leftPadding="0" bottomPadding="2" rightPadding="0"/>
 				<textElement verticalAlignment="Top"/>
 				<textFieldExpression><![CDATA[$F{physicaldescription}]]></textFieldExpression>
 			</textField>
 			<staticText>
-				<reportElement positionType="Float" x="0" y="360" width="180" height="15" uuid="b04a5196-ac37-4448-a2f1-844598312761"/>
+				<reportElement positionType="Float" x="0" y="391" width="180" height="15" uuid="b04a5196-ac37-4448-a2f1-844598312761"/>
 				<box topPadding="0" leftPadding="0" rightPadding="0"/>
 				<textElement textAlignment="Left" verticalAlignment="Bottom">
 					<font isBold="true"/>
@@ -328,13 +403,13 @@ ORDER BY sortableobjectnumber ASC]]>
 				<text><![CDATA[Content Description]]></text>
 			</staticText>
 			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
-				<reportElement positionType="Float" x="0" y="375" width="555" height="20" uuid="89fa2a6a-db11-4e3e-867e-33582c8ecf1f"/>
+				<reportElement positionType="Float" x="0" y="406" width="555" height="20" uuid="89fa2a6a-db11-4e3e-867e-33582c8ecf1f"/>
 				<box topPadding="4" leftPadding="0" bottomPadding="2" rightPadding="0"/>
 				<textElement verticalAlignment="Top"/>
 				<textFieldExpression><![CDATA[$F{contentdescription}]]></textFieldExpression>
 			</textField>
 			<staticText>
-				<reportElement positionType="Float" x="0" y="395" width="180" height="15" uuid="7994feed-88b1-4347-b7e7-182e1ba1bfc2"/>
+				<reportElement positionType="Float" x="0" y="426" width="180" height="15" uuid="7994feed-88b1-4347-b7e7-182e1ba1bfc2"/>
 				<box topPadding="0" leftPadding="0" rightPadding="0"/>
 				<textElement textAlignment="Left" verticalAlignment="Bottom">
 					<font isBold="true"/>
@@ -342,13 +417,13 @@ ORDER BY sortableobjectnumber ASC]]>
 				<text><![CDATA[Curatorial Remarks]]></text>
 			</staticText>
 			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
-				<reportElement positionType="Float" x="0" y="410" width="555" height="20" uuid="3311abc7-b69b-4e51-8b67-049b7f689ec7"/>
+				<reportElement positionType="Float" x="0" y="441" width="555" height="20" uuid="3311abc7-b69b-4e51-8b67-049b7f689ec7"/>
 				<box topPadding="4" leftPadding="0" bottomPadding="2" rightPadding="0"/>
 				<textElement verticalAlignment="Top"/>
 				<textFieldExpression><![CDATA[$F{curatorialremarks}]]></textFieldExpression>
 			</textField>
 			<staticText>
-				<reportElement positionType="Float" x="0" y="430" width="180" height="15" uuid="efc747ff-db13-46e3-818b-1853327cc64c"/>
+				<reportElement positionType="Float" x="0" y="461" width="180" height="15" uuid="efc747ff-db13-46e3-818b-1853327cc64c"/>
 				<box topPadding="0" leftPadding="0" rightPadding="0"/>
 				<textElement textAlignment="Left" verticalAlignment="Bottom">
 					<font isBold="true"/>
@@ -356,7 +431,7 @@ ORDER BY sortableobjectnumber ASC]]>
 				<text><![CDATA[Credit Line]]></text>
 			</staticText>
 			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
-				<reportElement positionType="Float" x="0" y="445" width="555" height="20" uuid="6f0aee98-a2c8-45f2-b1eb-7dcf377c9af2"/>
+				<reportElement positionType="Float" x="0" y="476" width="555" height="20" uuid="6f0aee98-a2c8-45f2-b1eb-7dcf377c9af2"/>
 				<box topPadding="4" leftPadding="0" bottomPadding="2" rightPadding="0"/>
 				<textElement verticalAlignment="Top"/>
 				<textFieldExpression><![CDATA[$F{creditline}]]></textFieldExpression>
@@ -382,9 +457,8 @@ ORDER BY sortableobjectnumber ASC]]>
 				</reportElement>
 			</line>
 			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
-				<reportElement positionType="Float" x="0" y="95" width="400" height="20" uuid="710647a4-4ea6-4162-8b9e-8f48711b5201">
+				<reportElement positionType="Float" x="0" y="95" width="400" height="20" uuid="ef1f71b6-25fd-4e46-9409-e920cf53b96e">
 					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
-					<property name="com.jaspersoft.studio.unit.width" value="pixel"/>
 				</reportElement>
 				<box>
 					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
@@ -392,16 +466,14 @@ ORDER BY sortableobjectnumber ASC]]>
 					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
 					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
 				</box>
-				<textElement verticalAlignment="Middle">
-					<paragraph lineSpacing="1_1_2"/>
-				</textElement>
+				<textElement verticalAlignment="Middle"/>
 				<textFieldExpression><![CDATA[$F{taxon}.replaceAll("\\([0-9]*,\"?|\"?\\)","").replaceAll(";;", "\n")]]></textFieldExpression>
 			</textField>
 			<staticText>
-				<reportElement positionType="Float" x="0" y="80" width="180" height="15" uuid="ca15a24e-1aa0-48d0-8dd8-ab36b4d4f613">
+				<reportElement key="" positionType="Float" x="0" y="80" width="180" height="15" uuid="276106af-3adc-439b-afaa-fece3d7e15d1">
 					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
 				</reportElement>
-				<textElement>
+				<textElement textAlignment="Left" verticalAlignment="Bottom">
 					<font isBold="true"/>
 				</textElement>
 				<text><![CDATA[Taxon / Common Name]]></text>
