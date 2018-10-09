@@ -387,7 +387,7 @@ ORDER BY comca.sortableobjectnumber ASC]]>
 				<textElement textAlignment="Left" verticalAlignment="Bottom">
 					<font size="10" isBold="true"/>
 				</textElement>
-				<text><![CDATA[Dimmension Summary]]></text>
+				<text><![CDATA[Dimension Summary]]></text>
 			</staticText>
 			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
 				<reportElement positionType="Float" x="0" y="235" width="555" height="20" uuid="996e508c-5e97-47e5-9974-181a709cfbd4">
