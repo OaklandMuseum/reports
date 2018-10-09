@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Created with Jaspersoft Studio version 6.6.0.final using JasperReports Library version 6.6.0  -->
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="hist_label_booklet" printOrder="Horizontal" pageWidth="612" pageHeight="792" columnWidth="517" columnSpacing="17" leftMargin="56" rightMargin="39" topMargin="35" bottomMargin="28" uuid="70795a47-2107-4b8e-994b-3a8276037ad9">
+	<property name="com.jaspersoft.studio.data.sql.tables" value=""/>
+	<property name="com.jaspersoft.studio.data.defaultdataadapter" value="One Empty Record"/>
+	<property name="com.jaspersoft.studio.unit.pageHeight" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.pageWidth" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.bottomMargin" value="pixel"/>
+	<parameter name="tenantid" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["35"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="csid" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["6d42c5ce-1d6f-4eba-b26b"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="cspace_server" class="java.lang.String" isForPrompting="false">
+		<parameterDescription><![CDATA[CSpace server address]]></parameterDescription>
+		<defaultValueExpression><![CDATA["localhost"]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[SELECT  lt.termdisplayname AS section, substring(lc.refname from position('''' in lc.refname) + 1 for char_length(lc.refname) - position('''' in lc.refname) - 1) AS locationcode
+FROM loctermgroup lt JOIN hierarchy h1 ON lt.id = h1.id
+JOIN locations_common lc ON lc.id = h1.parentid
+WHERE lt.termqualifier = 'Section title'
+ORDER BY section;]]>
+	</queryString>
+	<field name="section" class="java.lang.String"/>
+	<field name="locationcode" class="java.lang.String"/>
+	<pageHeader>
+		<band height="31">
+			<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+			<staticText>
+				<reportElement x="0" y="0" width="517" height="30" uuid="830ccbc5-6809-4b26-b720-e640e1d026e1"/>
+				<textElement>
+					<font size="18" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Label book sections by location]]></text>
+			</staticText>
+		</band>
+	</pageHeader>
+	<detail>
+		<band height="16" splitType="Prevent">
+			<property name="com.jaspersoft.studio.layout" value="com.jaspersoft.studio.editor.layout.FreeLayout"/>
+			<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+			<textField>
+				<reportElement x="0" y="0" width="230" height="15" uuid="cb84277e-6e9b-4ebf-a327-f3854a73afcd"/>
+				<textFieldExpression><![CDATA[$F{section}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="230" y="0" width="260" height="15" uuid="de337957-ff68-4dc0-9cb8-350c0eaf0622"/>
+				<textFieldExpression><![CDATA[$F{locationcode}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+	<pageFooter>
+		<band height="20">
+			<textField>
+				<reportElement x="400" y="0" width="100" height="20" uuid="6cd15913-0354-46dd-8729-ed6bfcb2b034">
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+				</reportElement>
+				<textElement textAlignment="Right"/>
+				<textFieldExpression><![CDATA[$V{PAGE_NUMBER}]]></textFieldExpression>
+			</textField>
+		</band>
+	</pageFooter>
+</jasperReport>

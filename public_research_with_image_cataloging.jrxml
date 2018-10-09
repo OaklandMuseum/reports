@@ -47,6 +47,16 @@
 
     -- creditline; sortby acquisitionreferencenumber
 (SELECT COALESCE(
+     	(SELECT string_agg(acq.creditline,' ' ORDER BY acq.acquisitionreferencenumber)
+        FROM relations_common racq
+        LEFT OUTER JOIN hierarchy hacq ON (hacq.name = racq.objectcsid)
+        LEFT OUTER JOIN acquisitions_common acq ON (hacq.id = acq.id)
+        LEFT OUTER JOIN misc ON (misc.id = acq.id)
+        WHERE h1.name = racq.subjectcsid AND racq.objectdocumenttype = 'Acquisition' AND misc.lifecyclestate <> 'deleted'
+        GROUP BY acq.acquisitionreferencenumber
+        ORDER BY acq.acquisitionreferencenumber DESC
+        LIMIT 1
+        ), 
      	(SELECT string_agg(li.creditline,' ' ORDER BY li.sortableloaninnumber)
         FROM relations_common rli
         LEFT OUTER JOIN hierarchy hli ON (hli.name = rli.objectcsid)
@@ -56,17 +66,7 @@
         GROUP BY li.sortableloaninnumber
         ORDER BY li.sortableloaninnumber DESC
         LIMIT 1
-    	),
-    	(SELECT string_agg(acq.creditline,' ' ORDER BY acq.acquisitionreferencenumber)
-        FROM relations_common racq
-        LEFT OUTER JOIN hierarchy hacq ON (hacq.name = racq.objectcsid)
-        LEFT OUTER JOIN acquisitions_common acq ON (hacq.id = acq.id)
-        LEFT OUTER JOIN misc ON (misc.id = acq.id)
-        WHERE h1.name = racq.subjectcsid AND racq.objectdocumenttype = 'Acquisition' AND misc.lifecyclestate <> 'deleted'
-        GROUP BY acq.acquisitionreferencenumber
-        ORDER BY acq.acquisitionreferencenumber DESC
-        LIMIT 1) 
-        
+    	)
     )) AS creditline,
 
     -- blobCSID from Media
