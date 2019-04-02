@@ -1,0 +1,307 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Created with Jaspersoft Studio version 6.6.0.final using JasperReports Library version 6.6.0  -->
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Condition Report Form - Tour" pageWidth="595" pageHeight="842" columnWidth="515" leftMargin="40" rightMargin="40" topMargin="20" bottomMargin="20" uuid="5be5b01d-525f-477a-adeb-30d93fa521ff">
+	<property name="com.jaspersoft.studio.data.sql.tables" value=""/>
+	<property name="net.sf.jasperreports.print.create.bookmarks" value="false"/>
+	<property name="com.jaspersoft.studio.data.defaultdataadapter" value="One Empty Record"/>
+	<property name="com.jaspersoft.studio.report.description"/>
+	<parameter name="tenantid" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["35"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="csid" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["1449fdd4-6d71-4440-9b80"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="cspace_server" class="java.lang.String" isForPrompting="false">
+		<parameterDescription><![CDATA[CSpace server address]]></parameterDescription>
+		<defaultValueExpression><![CDATA["localhost"]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[SELECT
+    co.id objectid,
+    h1.name objcsid,
+    co.objectnumber objectNumber,
+    comca.sortableobjectnumber sortableobjectnumber,
+    co.physicalDescription physicalDescription,
+    comca.argusDescription materialtechniquesummary,
+    co.contentDescription contentdescription,
+    co.distinguishingFeatures curatorialremarks,
+    comca.argusRemarks argusRemarks,
+    loo.loanoutexhibitiontitle exhibitiontitle,
+    TO_CHAR(date(loc.loanoutdate), 'mm/dd/yyyy') loanoutdate,
+    TO_CHAR(date(loc.loanreturndate), 'mm/dd/yyyy') loanreturndate,
+
+    --tg.title objectTitle,
+    array_to_string(array_agg(DISTINCT (h2.pos, tg.title)),';;') AS objectTitle,
+
+    --sd.datedisplaydate objectProductionDate,
+    array_to_string(array_agg(DISTINCT (h3.pos, sd.datedisplaydate)),';;') AS objectProductionDate,
+
+    --mpg.dimensionSummary dimensionSummary,
+    array_to_string(array_agg(DISTINCT (h4.pos, mpg.dimensionSummary)),';;') AS dimensionSummary,
+
+    --oppg.objectProductionPerson maker,
+    array_to_string(array_agg(DISTINCT (h5.pos, substring(oppg.objectProductionPerson, position(')''' IN oppg.objectProductionPerson)+2, length(oppg.objectProductionPerson)-position(')''' IN oppg.objectProductionPerson)-2))),';;') AS maker,
+
+    --ong.objectName objectName,
+    array_to_string(array_agg(DISTINCT (h6.pos, substring(ong.objectName, position(')''' IN ong.objectName)+2, length(ong.objectName)-position(')''' IN ong.objectName)-2))),';;') AS objectName,
+
+    --dhg.dhname taxon,
+    array_to_string(array_agg(DISTINCT (h7.pos, substring(dhg.dhname, position(')''' IN dhg.dhname)+2, length(dhg.dhname)-position(')''' IN dhg.dhname)-2))),';;') AS taxon,
+
+    --venues,
+    array_to_string(array_agg(DISTINCT (h8.pos, substring(vg.loanoutvenue, position(')''' IN vg.loanoutvenue)+2, length(vg.loanoutvenue)-position(')''' IN vg.loanoutvenue)-2) || ': ' || TO_CHAR(vg.loanoutvenueopeningdate::date, 'mm/dd/yyyy') || ' - ' || TO_CHAR(vg.loanoutvenueclosingdate::date, 'mm/dd/yy'))), ';;') AS venues,
+    
+    
+    -- creditline; sortby acquisitionreferencenumber
+(SELECT COALESCE(
+     	(SELECT string_agg(li.creditline,' ' ORDER BY li.sortableloaninnumber)
+        FROM relations_common rli
+        LEFT OUTER JOIN hierarchy hli ON (hli.name = rli.objectcsid)
+        LEFT OUTER JOIN loansin_omca li ON (hli.id = li.id)
+        LEFT OUTER JOIN misc ON (misc.id = li.id)
+        WHERE h1.name = rli.subjectcsid AND rli.objectdocumenttype = 'Loanin' AND misc.lifecyclestate <> 'deleted'
+        GROUP BY li.sortableloaninnumber
+        ORDER BY li.sortableloaninnumber DESC
+        LIMIT 1
+    	),
+    	(SELECT string_agg(acq.creditline,' ' ORDER BY acq.acquisitionreferencenumber)
+        FROM relations_common racq
+        LEFT OUTER JOIN hierarchy hacq ON (hacq.name = racq.objectcsid)
+        LEFT OUTER JOIN acquisitions_common acq ON (hacq.id = acq.id)
+        LEFT OUTER JOIN misc ON (misc.id = acq.id)
+        WHERE h1.name = racq.subjectcsid AND racq.objectdocumenttype = 'Acquisition' AND misc.lifecyclestate <> 'deleted'
+        GROUP BY acq.acquisitionreferencenumber
+        ORDER BY acq.acquisitionreferencenumber DESC
+        LIMIT 1)
+
+    )) AS creditline,
+
+    -- blobCSID from Media
+    (SELECT med.blobCsid
+        FROM relations_common rmed
+        LEFT OUTER JOIN hierarchy hmed ON (hmed.name = rmed.objectcsid)
+        LEFT OUTER JOIN media_common med ON (hmed.id = med.id)
+        LEFT OUTER JOIN media_omca momca ON (med.id = momca.id)
+        LEFT OUTER JOIN misc ON (misc.id = med.id)
+        LEFT OUTER JOIN collectionspace_core c ON (c.id =med.id)
+        WHERE h1.name = rmed.subjectcsid AND rmed.objectdocumenttype = 'Media' AND misc.lifecyclestate <> 'deleted'
+        ORDER BY c.updatedat DESC
+        LIMIT 1
+    ) AS blobCSID
+
+FROM hierarchy gh
+
+    JOIN relations_common grc ON  (gh.name = grc.objectcsid)
+    JOIN hierarchy h1 ON (grc.subjectcsid = h1.name)
+
+    INNER JOIN collectionobjects_common co ON (h1.id = co.id)
+
+    -- objectTitle
+    LEFT OUTER JOIN hierarchy h2 ON (co.id = h2.parentid AND h2.name = 'collectionobjects_common:titleGroupList')
+    LEFT OUTER JOIN titleGroup tg ON (h2.id = tg.id)
+
+    -- objectProductionDate
+    LEFT OUTER JOIN hierarchy h3 ON (co.id = h3.parentid AND h3.name = 'collectionobjects_common:objectProductionDateGroupList')
+    LEFT OUTER JOIN structureddategroup sd ON (h3.id = sd.id)
+
+    -- dimensionSummary
+    LEFT OUTER JOIN hierarchy h4 ON (co.id = h4.parentid AND h4.name = 'collectionobjects_common:measuredPartGroupList')
+    LEFT OUTER JOIN measuredpartgroup mpg ON (h4.id = mpg.id)
+
+    -- maker
+    LEFT OUTER JOIN hierarchy h5 ON (co.id = h5.parentid AND h5.name = 'collectionobjects_common:objectProductionPersonGroupList')
+    LEFT OUTER JOIN objectProductionPersonGroup oppg ON (h5.id = oppg.id)
+
+    -- objectName
+    LEFT OUTER JOIN hierarchy h6 ON (co.id = h6.parentid AND h6.primarytype='objectNameGroup')
+    LEFT OUTER JOIN objectnamegroup ong ON (ong.id=h6.id)
+
+    -- taxon
+    LEFT OUTER JOIN hierarchy h7 ON (co.id = h7.parentid and h7.primarytype = 'determinationHistoryGroup')
+    LEFT OUTER JOIN determinationhistorygroup dhg ON (dhg.id = h7.id)
+
+    --venues
+    LEFT OUTER JOIN hierarchy h8 ON (gh.id = h8.parentid and h8.primarytype = 'loanoutVenuesGroup')
+    LEFT OUTER JOIN loanoutvenuesgroup vg ON (vg.id = h8.id)
+
+    --exhibitiontitle
+    LEFT OUTER JOIN loansout_omca loo ON (gh.id = loo.id)
+
+    --loan dates
+    LEFT OUTER JOIN loansout_common loc ON (gh.id = loc.id)
+
+    INNER JOIN misc ON (misc.id = co.id AND misc.lifecyclestate <> 'deleted')
+    INNER JOIN collectionspace_core core ON core.id = co.id
+    INNER JOIN collectionobjects_omca comca ON (co.id = comca.id)
+
+WHERE core.tenantid = $P{tenantid} AND gh.name=$P{csid}
+
+GROUP BY objectid, objectNumber, sortableobjectnumber, materialtechniquesummary, physicalDescription, contentdescription, curatorialremarks, argusremarks, h1.name, exhibitiontitle, loanoutdate, loanreturndate
+
+ORDER BY sortableobjectnumber ASC]]>
+	</queryString>
+	<field name="objectid" class="java.lang.String"/>
+	<field name="objcsid" class="java.lang.String"/>
+	<field name="objectnumber" class="java.lang.String"/>
+	<field name="sortableobjectnumber" class="java.lang.String"/>
+	<field name="physicaldescription" class="java.lang.String"/>
+	<field name="materialtechniquesummary" class="java.lang.String"/>
+	<field name="contentdescription" class="java.lang.String"/>
+	<field name="curatorialremarks" class="java.lang.String"/>
+	<field name="argusremarks" class="java.lang.String"/>
+	<field name="objecttitle" class="java.lang.String"/>
+	<field name="objectproductiondate" class="java.lang.String"/>
+	<field name="dimensionsummary" class="java.lang.String"/>
+	<field name="maker" class="java.lang.String"/>
+	<field name="objectname" class="java.lang.String"/>
+	<field name="taxon" class="java.lang.String"/>
+	<field name="creditline" class="java.lang.String"/>
+	<field name="blobcsid" class="java.lang.String"/>
+	<field name="exhibitiontitle" class="java.lang.String"/>
+	<field name="loanoutdate" class="java.lang.String"/>
+	<field name="loanreturndate" class="java.lang.String"/>
+	<field name="venues" class="java.lang.String"/>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<detail>
+		<band height="671" splitType="Stretch">
+			<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+			<textField isStretchWithOverflow="true" evaluationTime="Auto" isBlankWhenNull="true" hyperlinkType="Reference" hyperlinkTarget="Blank">
+				<reportElement positionType="Float" x="0" y="171" width="400" height="18" uuid="b9533ed6-3c5a-4d2f-9b02-3c2a236a28de">
+					<property name="com.jaspersoft.studio.unit.width" value="pixel"/>
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+					<property name="com.jaspersoft.studio.unit.x" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" bottomPadding="2" rightPadding="0">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement verticalAlignment="Top">
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{objectnumber}]]></textFieldExpression>
+				<hyperlinkReferenceExpression><![CDATA["http://"+ $P{cspace_server} + ":8180/collectionspace/ui/omca/html/cataloging.html?csid=" + $F{objcsid}]]></hyperlinkReferenceExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="234" width="400" height="15" uuid="320f5077-189f-44eb-b8ce-fc58eda923de"/>
+				<box topPadding="4" leftPadding="0" bottomPadding="2" rightPadding="0"/>
+				<textElement verticalAlignment="Top">
+					<paragraph lineSpacing="1_1_2"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{objectproductiondate}.replaceAll("\\([0-9]*,\"?|\"?\\)","").replaceAll(";;", "\n")]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement key="" positionType="Float" x="0" y="189" width="400" height="15" uuid="c415f399-2dae-4e9e-afaa-882cbc52d46b"/>
+				<box topPadding="4" leftPadding="0" bottomPadding="2" rightPadding="0"/>
+				<textElement verticalAlignment="Top">
+					<font isItalic="true"/>
+					<paragraph lineSpacing="1_1_2"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{objecttitle}.replaceAll("\\([0-9]*,\"?|\"?\\)","").replaceAll(";;", "\n")]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="204" width="400" height="15" uuid="9eba880e-5b0d-41de-8bd9-895e98f7caec"/>
+				<box topPadding="4" leftPadding="0" bottomPadding="2" rightPadding="0"/>
+				<textElement verticalAlignment="Top">
+					<paragraph lineSpacing="1_1_2"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{maker}.replaceAll("\\([0-9]*,\"?|\"?\\)","").replaceAll(";;", "\n")]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="0" y="219" width="555" height="15" uuid="a94cd41a-04a9-47a9-84f1-3d5107083e88"/>
+				<box topPadding="4" leftPadding="0" bottomPadding="2" rightPadding="0"/>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[$F{materialtechniquesummary}]]></textFieldExpression>
+			</textField>
+			<image hAlign="Center" vAlign="Top" isUsingCache="true" isLazy="true">
+				<reportElement key="" x="100" y="312" width="322" height="337" isRemoveLineWhenBlank="true" uuid="97535ba2-c649-42d7-9969-6b08be4b77e5">
+					<property name="com.jaspersoft.studio.unit.y" value="pixel"/>
+					<property name="com.jaspersoft.studio.unit.width" value="pixel"/>
+					<property name="com.jaspersoft.studio.unit.x" value="pixel"/>
+					<printWhenExpression><![CDATA[!$F{blobcsid}.isEmpty()]]></printWhenExpression>
+				</reportElement>
+				<box padding="1" topPadding="0" leftPadding="1">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<imageExpression><![CDATA["http://" + $P{cspace_server} +  "/fetchimage/original.php?csid=" + $F{blobcsid}]]></imageExpression>
+			</image>
+			<staticText>
+				<reportElement x="0" y="28" width="120" height="21" uuid="ffe156cb-0320-4493-8bd8-ef7170e06bda"/>
+				<textElement>
+					<font size="12" isBold="true" isUnderline="true"/>
+				</textElement>
+				<text><![CDATA[Condition Report:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="0" y="91" width="80" height="15" uuid="8f380bf9-63f5-4b2e-b779-b18e13d5c72c"/>
+				<textElement textAlignment="Right" verticalAlignment="Bottom">
+					<font isBold="true" isUnderline="false"/>
+				</textElement>
+				<text><![CDATA[Venues:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="0" y="50" width="80" height="15" uuid="de5a17b0-f10b-4ae7-b983-ce2043654e0a"/>
+				<textElement textAlignment="Right" verticalAlignment="Bottom">
+					<font isBold="true" isUnderline="false"/>
+				</textElement>
+				<text><![CDATA[Exhibition:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="0" y="70" width="80" height="15" uuid="b3243f8b-b8c4-4c7a-8a94-c7af96429a04"/>
+				<textElement textAlignment="Right" verticalAlignment="Bottom">
+					<font isBold="true" isUnderline="false"/>
+				</textElement>
+				<text><![CDATA[Loan Dates:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="0" y="273" width="500" height="21" uuid="6c3750e1-fa3f-482c-9a86-17fb9f97f66d"/>
+				<textElement>
+					<font size="12" isBold="true" isUnderline="true"/>
+				</textElement>
+				<text><![CDATA[Outgoing - ]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="0" y="650" width="500" height="21" uuid="a3053548-389c-44fb-858b-943c4c126bf5"/>
+				<textElement>
+					<font size="12" isBold="true" isUnderline="true"/>
+				</textElement>
+				<text><![CDATA[Incoming - ]]></text>
+			</staticText>
+			<image hAlign="Right" onErrorType="Blank">
+				<reportElement x="440" y="25" width="70" height="89" uuid="a49adaa1-32a4-49c5-a402-a54395746ee8"/>
+				<imageExpression><![CDATA["/usr/local/share/apache-tomcat-7.0.57/cspace/reports/OMCA.gif"]]></imageExpression>
+			</image>
+			<textField>
+				<reportElement x="87" y="95" width="335" height="72" uuid="8f6fd420-22b5-4bd3-b601-ac3d15e1f828"/>
+				<textElement>
+					<paragraph lineSpacing="Double" lineSpacingSize="2.0"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{venues}.replaceAll("\\([0-9]*,\"?|\"?\\)","").replaceAll(";;", "\n")]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="87" y="50" width="334" height="15" uuid="e607de3c-b768-4de6-8ca0-ccfa2156da3e"/>
+				<textElement verticalAlignment="Bottom" markup="html"/>
+				<textFieldExpression><![CDATA[$F{exhibitiontitle}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="false">
+				<reportElement x="87" y="70" width="334" height="15" uuid="dc681863-4ad8-4143-b6f3-33d25681bb0d"/>
+				<textElement verticalAlignment="Bottom"/>
+				<textFieldExpression><![CDATA[($F{loanoutdate} + " - " + $F{loanreturndate}).replaceAll("null", "")]]></textFieldExpression>
+			</textField>
+			<rectangle>
+				<reportElement x="0" y="0" width="510" height="20" forecolor="rgba(255, 255, 255, 0.0)" backcolor="rgba(255, 255, 255, 0.0)" uuid="8367d5a5-9c8c-4185-93d1-4eab391e3b02"/>
+			</rectangle>
+		</band>
+	</detail>
+	<pageFooter>
+		<band height="17" splitType="Stretch">
+			<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+		</band>
+	</pageFooter>
+</jasperReport>
