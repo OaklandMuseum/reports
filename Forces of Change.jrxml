@@ -79,8 +79,10 @@
         LEFT OUTER JOIN hierarchy hmed ON (hmed.name = rmed.objectcsid)
         LEFT OUTER JOIN media_common med ON (hmed.id = med.id)
         LEFT OUTER JOIN misc ON (misc.id = med.id)
-        WHERE h2.name = rmed.subjectcsid AND rmed.objectdocumenttype = 'Media' AND misc.lifecyclestate <> 'deleted'
-        LIMIT 1
+        LEFT OUTER JOIN collectionspace_core cc ON (cc.id = med.id)
+	WHERE h2.name = rmed.subjectcsid AND rmed.objectdocumenttype = 'Media' AND misc.lifecyclestate <> 'deleted'
+        ORDER BY cc.updatedat DESC
+	LIMIT 1
     ) AS blobCSID
 
 FROM collectionobjects_common co
@@ -112,7 +114,7 @@ FROM collectionobjects_common co
     INNER JOIN collectionspace_core core ON (core.id = co.id)
     INNER JOIN collectionobjects_omca comca ON (co.id = comca.id)
 
-WHERE co.computedcurrentlocation IN (SELECT refname FROM locations_common WHERE id IN (SELECT parentid FROM hierarchy WHERE id IN (SELECT id FROM loctermgroup WHERE termdisplayname = 'Forces of Change: We Were There')))
+WHERE co.computedcurrentlocation IN (SELECT refname FROM locations_common WHERE id IN (SELECT parentid FROM hierarchy WHERE id IN (SELECT id FROM loctermgroup WHERE termdisplayname = 'Black Power')))
 
 GROUP BY comca.computedcurrentlocationdisplay, objectnumber, objectid, sortableobjectnumber, h3.name, materialtechniquesummary, physicaldescription, contentdescription, curatorialremarks, h2.name
 ORDER BY lsort1, lsort2;]]>
@@ -134,7 +136,7 @@ ORDER BY lsort1, lsort2;]]>
 				<textElement>
 					<font size="18" isBold="true"/>
 				</textElement>
-				<text><![CDATA[Coming for Land]]></text>
+				<text><![CDATA[Black Power]]></text>
 			</staticText>
 		</band>
 	</pageHeader>
