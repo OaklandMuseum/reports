@@ -27,8 +27,8 @@
     co.distinguishingFeatures curatorialremarks,
     comca.argusRemarks argusRemarks,
     loo.loanoutexhibitiontitle exhibitiontitle,
-    TO_CHAR(date(loc.loanoutdate), 'mm/dd/yyyy') loanoutdate,
-    TO_CHAR(date(loc.loanreturndate), 'mm/dd/yyyy') loanreturndate,
+    TO_CHAR(date(loc.loanoutdate + INTERVAL '1 day'), 'mm/dd/yyyy') loanoutdate,
+    TO_CHAR(date(loc.loanreturndate + INTERVAL '1 day'), 'mm/dd/yyyy') loanreturndate,
 
     --tg.title objectTitle,
     array_to_string(array_agg(DISTINCT (h2.pos, tg.title)),';;') AS objectTitle,
@@ -50,8 +50,8 @@
 
     --venues,
     array_to_string(array_agg(DISTINCT (h8.pos, substring(vg.loanoutvenue, position(')''' IN vg.loanoutvenue)+2, length(vg.loanoutvenue)-position(')''' IN vg.loanoutvenue)-2) || ': ' || TO_CHAR(vg.loanoutvenueopeningdate::date, 'mm/dd/yyyy') || ' - ' || TO_CHAR(vg.loanoutvenueclosingdate::date, 'mm/dd/yy'))), ';;') AS venues,
-    
-    
+
+
     -- creditline; sortby acquisitionreferencenumber
 (SELECT COALESCE(
      	(SELECT string_agg(li.creditline,' ' ORDER BY li.sortableloaninnumber)
@@ -280,7 +280,8 @@ ORDER BY sortableobjectnumber ASC]]>
 			<textField>
 				<reportElement x="87" y="95" width="335" height="72" uuid="8f6fd420-22b5-4bd3-b601-ac3d15e1f828"/>
 				<textElement>
-					<paragraph lineSpacing="Double" lineSpacingSize="2.0"/>
+					<font size="8"/>
+					<paragraph lineSpacing="Proportional" lineSpacingSize="2.0"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{venues}.replaceAll("\\([0-9]*,\"?|\"?\\)","").replaceAll(";;", "\n")]]></textFieldExpression>
 			</textField>
