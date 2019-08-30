@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Created with Jaspersoft Studio version 6.6.0.final using JasperReports Library version 6.6.0  -->
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Public Research with Image - Cataloging" pageWidth="595" pageHeight="842" columnWidth="515" leftMargin="40" rightMargin="40" topMargin="20" bottomMargin="20" uuid="5be5b01d-525f-477a-adeb-30d93fa521ff">
+	<property name="com.jaspersoft.studio.data.sql.tables" value=""/>
+	<property name="net.sf.jasperreports.print.create.bookmarks" value="false"/>
+	<property name="com.jaspersoft.studio.data.defaultdataadapter" value="One Empty Record"/>
+	<parameter name="tenantid" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["35"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="csid" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["1449fdd4-6d71-4440-9b80"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="cspace_server" class="java.lang.String" isForPrompting="false">
+		<parameterDescription><![CDATA[CSpace server address]]></parameterDescription>
+		<defaultValueExpression><![CDATA["localhost"]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[SELECT
+    co.id objectid,
+    h1.name objcsid,
+    co.objectnumber objectNumber,
+    comca.sortableobjectnumber sortableobjectnumber,
+    co.physicalDescription physicalDescription,
+    comca.argusDescription materialtechniquesummary,
+    co.contentDescription contentdescription,
+    co.distinguishingFeatures curatorialremarks,
+    comca.argusRemarks argusRemarks,
+   
+    --tg.title objectTitle,
+    array_to_string(array_agg(DISTINCT (h2.pos, tg.title)),';;') AS objectTitle,
+
+    --sd.datedisplaydate objectProductionDate,
+    array_to_string(array_agg(DISTINCT (h3.pos, sd.datedisplaydate)),';;') AS objectProductionDate,
+
+    --mpg.dimensionSummary dimensionSummary,
+    array_to_string(array_agg(DISTINCT (h4.pos, mpg.dimensionSummary)),';;') AS dimensionSummary,
+
+    --oppg.objectProductionPerson maker,
+    array_to_string(array_agg(DISTINCT (h5.pos, substring(oppg.objectProductionPerson, position(')''' IN oppg.objectProductionPerson)+2, length(oppg.objectProductionPerson)-position(')''' IN oppg.objectProductionPerson)-2))),';;') AS maker,
+
+    --ong.objectName objectName,
+    array_to_string(array_agg(DISTINCT (h6.pos, substring(ong.objectName, position(')''' IN ong.objectName)+2, length(ong.objectName)-position(')''' IN ong.objectName)-2))),';;') AS objectName,
+    
+    --dhg.dhname taxon,
+    array_to_string(array_agg(DISTINCT (h7.pos, substring(dhg.dhname, position(')''' IN dhg.dhname)+2, length(dhg.dhname)-position(')''' IN dhg.dhname)-2))),';;') AS taxon,
+
+    -- creditline; sortby acquisitionreferencenumber
+(SELECT COALESCE(
+     	(SELECT string_agg(li.creditline,' ' ORDER BY li.sortableloaninnumber)
+        FROM relations_common rli
+        LEFT OUTER JOIN hierarchy hli ON (hli.name = rli.objectcsid)
+        LEFT OUTER JOIN loansin_omca li ON (hli.id = li.id)
+        LEFT OUTER JOIN misc ON (misc.id = li.id)
+        WHERE h1.name = rli.subjectcsid AND rli.objectdocumenttype = 'Loanin' AND misc.lifecyclestate <> 'deleted'
+        GROUP BY li.sortableloaninnumber
+        ORDER BY li.sortableloaninnumber DESC
+        LIMIT 1
+    	),
+    	(SELECT string_agg(acq.creditline,' ' ORDER BY acq.acquisitionreferencenumber)
+        FROM relations_common racq
+        LEFT OUTER JOIN hierarchy hacq ON (hacq.name = racq.objectcsid)
+        LEFT OUTER JOIN acquisitions_common acq ON (hacq.id = acq.id)
+        LEFT OUTER JOIN misc ON (misc.id = acq.id)
+        WHERE h1.name = racq.subjectcsid AND racq.objectdocumenttype = 'Acquisition' AND misc.lifecyclestate <> 'deleted'
+        GROUP BY acq.acquisitionreferencenumber
+        ORDER BY acq.acquisitionreferencenumber DESC
+        LIMIT 1) 
+        
+    )) AS creditline,
+
+    -- blobCSID from Media
+    (SELECT med.blobCsid
+        FROM relations_common rmed
+        LEFT OUTER JOIN hierarchy hmed ON (hmed.name = rmed.objectcsid)
+        LEFT OUTER JOIN media_common med ON (hmed.id = med.id)
+        LEFT OUTER JOIN media_omca momca ON (med.id = momca.id)
+        LEFT OUTER JOIN misc ON (misc.id = med.id)
+        LEFT OUTER JOIN collectionspace_core c ON (c.id =med.id)
+        WHERE h1.name = rmed.subjectcsid AND rmed.objectdocumenttype = 'Media' AND misc.lifecyclestate <> 'deleted'
+        ORDER BY c.updatedat DESC
+        LIMIT 1
+    ) AS blobCSID
+
+FROM collectionobjects_common co
+
+    JOIN hierarchy h1 ON (co.id = h1.id)
+
+    -- objectTitle
+    LEFT OUTER JOIN hierarchy h2 ON (co.id = h2.parentid AND h2.name = 'collectionobjects_common:titleGroupList')
+    LEFT OUTER JOIN titleGroup tg ON (h2.id = tg.id)
+
+    -- objectProductionDate
+    LEFT OUTER JOIN hierarchy h3 ON (co.id = h3.parentid AND h3.name = 'collectionobjects_common:objectProductionDateGroupList')
+    LEFT OUTER JOIN structureddategroup sd ON (h3.id = sd.id)
+
+    -- dimensionSummary
+    LEFT OUTER JOIN hierarchy h4 ON (co.id = h4.parentid AND h4.name = 'collectionobjects_common:measuredPartGroupList')
+    LEFT OUTER JOIN measuredpartgroup mpg ON (h4.id = mpg.id)
+
+    -- maker
+    LEFT OUTER JOIN hierarchy h5 ON (co.id = h5.parentid AND h5.name = 'collectionobjects_common:objectProductionPersonGroupList')
+    LEFT OUTER JOIN objectProductionPersonGroup oppg ON (h5.id = oppg.id)
+
+    -- objectName
+    LEFT OUTER JOIN hierarchy h6 ON (co.id = h6.parentid AND h6.primarytype='objectNameGroup')
+    LEFT OUTER JOIN objectnamegroup ong ON (ong.id=h6.id)
+    
+    -- taxon
+    LEFT OUTER JOIN hierarchy h7 ON (co.id = h7.parentid and h7.primarytype = 'determinationHistoryGroup')
+    LEFT OUTER JOIN determinationhistorygroup dhg ON (dhg.id = h7.id)
+
+    INNER JOIN misc ON (misc.id = co.id AND misc.lifecyclestate <> 'deleted')
+    INNER JOIN collectionspace_core core ON core.id = co.id
+    INNER JOIN collectionobjects_omca comca ON (co.id = comca.id)
+
+WHERE core.tenantid = $P{tenantid} AND h1.name=$P{csid}
+
+GROUP BY objectid, objectNumber, sortableobjectnumber, materialtechniquesummary, physicalDescription, contentdescription, curatorialremarks, argusremarks, h1.name
+
+ORDER BY sortableobjectnumber ASC]]>
+	</queryString>
+	<field name="objectid" class="java.lang.String"/>
+	<field name="objcsid" class="java.lang.String"/>
+	<field name="objectnumber" class="java.lang.String"/>
+	<field name="sortableobjectnumber" class="java.lang.String"/>
+	<field name="physicaldescription" class="java.lang.String"/>
+	<field name="materialtechniquesummary" class="java.lang.String"/>
+	<field name="contentdescription" class="java.lang.String"/>
+	<field name="curatorialremarks" class="java.lang.String"/>
+	<field name="argusremarks" class="java.lang.String"/>
+	<field name="objecttitle" class="java.lang.String"/>
+	<field name="objectproductiondate" class="java.lang.String"/>
+	<field name="dimensionsummary" class="java.lang.String"/>
+	<field name="maker" class="java.lang.String"/>
+	<field name="objectname" class="java.lang.String"/>
+	<field name="taxon" class="java.lang.String"/>
+	<field name="creditline" class="java.lang.String"/>
+	<field name="blobcsid" class="java.lang.String"/>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band height="24" splitType="Stretch">
+			<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+		</band>
+	</title>
+	<detail>
+		<band height="671" splitType="Stretch">
+			<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+			<textField isStretchWithOverflow="true" evaluationTime="Auto" isBlankWhenNull="true" hyperlinkType="Reference" hyperlinkTarget="Blank">
+				<reportElement positionType="Float" x="0" y="0" width="400" height="20" uuid="b9533ed6-3c5a-4d2f-9b02-3c2a236a28de">
+					<property name="com.jaspersoft.studio.unit.width" value="pixel"/>
+					<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+					<property name="com.jaspersoft.studio.unit.x" value="pixel"/>
+				</reportElement>
+				<box topPadding="4" leftPadding="0" bottomPadding="2" rightPadding="0">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement verticalAlignment="Top">
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{objectnumber}]]></textFieldExpression>
+				<hyperlinkReferenceExpression><![CDATA["http://"+ $P{cspace_server} + ":8180/collectionspace/ui/omca/html/cataloging.html?csid=" + $F{objcsid}]]></hyperlinkReferenceExpression>
+			</textField>
+			<image hAlign="Center" vAlign="Top" isUsingCache="true" isLazy="true">
+				<reportElement key="" x="10" y="40" width="494" height="620" isRemoveLineWhenBlank="true" uuid="97535ba2-c649-42d7-9969-6b08be4b77e5">
+					<property name="com.jaspersoft.studio.unit.y" value="pixel"/>
+					<property name="com.jaspersoft.studio.unit.width" value="pixel"/>
+					<property name="com.jaspersoft.studio.unit.x" value="pixel"/>
+					<printWhenExpression><![CDATA[!$F{blobcsid}.isEmpty()]]></printWhenExpression>
+				</reportElement>
+				<box padding="1" topPadding="0" leftPadding="1">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<imageExpression><![CDATA["http://" + $P{cspace_server} +  "/fetchimage/original.php?csid=" + $F{blobcsid}]]></imageExpression>
+			</image>
+		</band>
+	</detail>
+	<pageFooter>
+		<band height="17" splitType="Stretch">
+			<property name="com.jaspersoft.studio.unit.height" value="pixel"/>
+		</band>
+	</pageFooter>
+</jasperReport>
